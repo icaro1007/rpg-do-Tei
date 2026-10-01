@@ -300,6 +300,108 @@ h1 {
     font-size: 1.1rem;
     margin: 0;
 }
+
+#painel-narrador.narrador-atualizando {
+    animation: narradorLegivelEntrada 320ms ease-out;
+}
+
+@keyframes narradorLegivelEntrada {
+    from { opacity: 0.45; transform: translateY(2px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#historico-narrador {
+    margin-top: 9px;
+    padding: 0 10px;
+    color: rgba(236, 240, 241, 0.9);
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(212, 175, 55, 0.28);
+    border-radius: 6px;
+    text-align: left;
+}
+
+.titulo-historico-narrador {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 0;
+    color: #d8bd68;
+    font-size: 0.72rem;
+    font-style: normal;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    user-select: none;
+    list-style-position: inside;
+}
+
+.titulo-historico-narrador::marker {
+    color: rgba(216, 189, 104, 0.8);
+}
+
+#quantidade-historico-narrador {
+    min-width: 23px;
+    padding: 1px 7px;
+    color: #fff5c7;
+    background: rgba(212, 175, 55, 0.16);
+    border-radius: 999px;
+    font-size: 0.66rem;
+    letter-spacing: 0;
+    text-align: center;
+}
+
+#historico-narrador[open] {
+    padding-bottom: 9px;
+}
+
+#historico-narrador[open] .titulo-historico-narrador {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    margin-bottom: 4px;
+}
+
+#lista-historico-narrador {
+    max-height: 132px;
+    margin: 0;
+    padding: 0 3px 0 0;
+    overflow-y: auto;
+    list-style: none;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(212, 175, 55, 0.6) rgba(0, 0, 0, 0.2);
+}
+
+#lista-historico-narrador li {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    gap: 7px;
+    align-items: start;
+    padding: 5px 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    font-size: 0.84rem;
+    font-style: normal;
+    line-height: 1.3;
+}
+
+#lista-historico-narrador li:first-child {
+    border-top: 0;
+    color: #fff5c7;
+}
+
+.ordem-narrador {
+    color: rgba(212, 175, 55, 0.7);
+    font-size: 0.7rem;
+    line-height: 1.55;
+}
+
+.repeticao-narrador {
+    align-self: center;
+    padding: 1px 5px;
+    color: #1d1711;
+    background: #d8bd68;
+    border-radius: 999px;
+    font-size: 0.67rem;
+    font-weight: 700;
+}
 /* ==========================================================================
    BOTÕES DE AÇÃO E DADOS
    ========================================================================== */
@@ -2986,6 +3088,30 @@ button:active {
 /* =========================================================
    CTRL C / CTRL V — gosma metamorfa copiando outra carta
    ========================================================= */
+
+.selo-forma-criador-ctrl-rpg {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    z-index: 16;
+    padding: 2px 6px;
+    border: 1px solid rgba(255, 255, 255, .72);
+    border-radius: 999px;
+    color: #fff;
+    background: rgba(25, 37, 73, .86);
+    box-shadow: 0 2px 7px rgba(0, 0, 0, .28);
+    font: 700 8px/1.2 Georgia, serif;
+    letter-spacing: .08em;
+    pointer-events: none;
+}
+
+.ctrl-forma-icaro-rpg {
+    box-shadow: 0 0 0 2px rgba(60, 226, 255, .62), 0 0 15px rgba(60, 226, 255, .46) !important;
+}
+
+.ctrl-forma-thiago-rpg {
+    box-shadow: 0 0 0 2px rgba(255, 204, 74, .64), 0 0 15px rgba(255, 204, 74, .44) !important;
+}
 
 .ctrl-metamorfo-balancando {
     animation: auraMetamorfaCtrl 1.38s ease-in-out;
@@ -6220,6 +6346,96 @@ body.modal-carta-aberto-rpg { overflow: hidden; }
 .troca-repetidas-vazia-rpg { grid-column: 1 / -1; margin: 0; padding: 16px; color: #87a9c0; text-align: center; border: 1px dashed rgba(120, 188, 230, .25); border-radius: 10px; }
 .mensagem-troca-rpg { min-height: 22px; margin: 12px 0 0; color: #ffe078; font-weight: 800; text-align: center; }
 
+body.modal-troca-aberto-rpg { overflow: hidden; }
+
+.modal-troca-rpg {
+    position: fixed;
+    inset: 0;
+    z-index: 10020;
+    padding: 24px;
+    display: grid;
+    place-items: center;
+    background: rgba(1, 9, 18, .88);
+    backdrop-filter: blur(7px);
+}
+
+.modal-troca-conteudo-rpg {
+    position: relative;
+    width: min(960px, 100%);
+    max-height: calc(100vh - 48px);
+    overflow: auto;
+    padding: 28px;
+    border: 2px solid #e9bd3f;
+    border-radius: 21px;
+    background: radial-gradient(circle at 50% 0, rgba(37, 91, 133, .44), transparent 42%), linear-gradient(145deg, #123a5d, #06182d 68%);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, .62), inset 0 0 28px rgba(90, 183, 239, .08);
+}
+
+.modal-troca-conteudo-rpg h2 { margin: 7px 52px 5px 0; color: #fff0a9; font-family: Georgia, serif; font-size: clamp(1.75rem, 4vw, 2.55rem); }
+.resumo-troca-rpg { margin: 0; color: #b9d7e7; line-height: 1.55; }
+.resumo-troca-rpg strong { color: #ffe27a; }
+
+.fechar-modal-troca-rpg {
+    position: absolute;
+    top: 17px;
+    right: 17px;
+    width: 42px;
+    height: 42px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #6aa6c9;
+    border-radius: 50%;
+    color: #e8f8ff;
+    font-size: 1.7rem;
+    line-height: 1;
+    background: #0a2943;
+}
+
+.opcoes-troca-rpg {
+    margin-top: 22px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+    gap: 13px;
+}
+
+.opcao-troca-rpg {
+    min-width: 0;
+    margin: 0;
+    padding: 11px;
+    display: grid;
+    justify-items: center;
+    gap: 7px;
+    border: 2px solid rgba(116, 189, 231, .3);
+    border-radius: 13px;
+    color: #eaf8ff;
+    background: rgba(3, 20, 38, .82);
+    transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease, background .18s ease;
+}
+
+.opcao-troca-rpg:hover,
+.opcao-troca-rpg:focus-visible { border-color: #7dd6ff; transform: translateY(-2px); outline: none; }
+.opcao-troca-rpg.selecionada { border-color: #ffd452; background: linear-gradient(160deg, rgba(55, 104, 137, .95), rgba(8, 33, 55, .96)); box-shadow: 0 0 0 3px rgba(255, 212, 82, .18), 0 8px 24px rgba(0, 0, 0, .32); }
+.opcao-troca-rpg img { width: 100%; height: 160px; object-fit: contain; border-radius: 7px; }
+.opcao-troca-rpg strong { color: #fff0af; font-size: .93rem; text-align: center; }
+.opcao-troca-rpg small { color: #8ec8e8; text-transform: uppercase; letter-spacing: .08em; }
+.opcao-troca-rpg span { padding: 5px 10px; border-radius: 999px; color: #4a3100; font-size: .75rem; font-weight: 900; background: #f3c64c; }
+
+.selecao-troca-rpg { min-height: 24px; margin: 18px 0 10px; color: #ffe27a; font-weight: 800; text-align: center; }
+.acoes-modal-troca-rpg { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.acoes-modal-troca-rpg button { min-width: 165px; min-height: 44px; margin: 0; padding: 9px 18px; border-radius: 10px; font-weight: 900; }
+.cancelar-troca-rpg { border: 1px solid #7198ad; color: #d7eaf4; background: #17354a; }
+.confirmar-troca-rpg { border: 1px solid #ffe16b; color: #3d2800; background: linear-gradient(to bottom, #ffe77e, #e9a625); }
+.confirmar-troca-rpg:disabled { border-color: #49687a; color: #7793a3; background: #173247; box-shadow: none; }
+
+@media (max-width: 560px) {
+    .modal-troca-rpg { padding: 9px; }
+    .modal-troca-conteudo-rpg { max-height: calc(100vh - 18px); padding: 21px 14px; border-radius: 15px; }
+    .opcoes-troca-rpg { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .opcao-troca-rpg { padding: 8px; }
+    .opcao-troca-rpg img { height: 125px; }
+    .acoes-modal-troca-rpg button { width: 100%; min-width: 0; }
+}
+
 /* Arena e resultado */
 .barra-partida-rpg {
     margin: 0 auto 10px;
@@ -6630,14 +6846,47 @@ body.modal-bau-aberto-rpg { overflow: hidden; }
 }
 
 .nascimento-slime-rpg {
-    animation: nascimento-slime-rpg .52s cubic-bezier(.18, .82, .28, 1.25) both;
-    animation-delay: var(--atraso-slime, 0ms);
+    pointer-events: none;
+    will-change: transform, opacity, filter;
+    animation: nascimento-slime-rpg .68s cubic-bezier(.18, .82, .28, 1.18) both;
+    animation-delay: calc(360ms + var(--atraso-slime, 0ms));
 }
 
 @keyframes nascimento-slime-rpg {
-    0% { opacity: 0; transform: scale(1.18); filter: brightness(1.7) saturate(1.5); }
-    55% { opacity: 1; transform: scale(.82) translateY(7px); }
-    100% { transform: scale(1) translateY(0); filter: brightness(1) saturate(1); }
+    0% {
+        opacity: 0;
+        transform: translate(var(--origem-slime-x, 0), var(--origem-slime-y, 0)) scale(.42);
+        filter: blur(2px) brightness(1.8) saturate(1.6);
+    }
+    72% {
+        opacity: 1;
+        transform: translate(0, 0) scale(1.06);
+        filter: blur(0) brightness(1.25) saturate(1.25);
+    }
+    100% { opacity: 1; transform: translate(0, 0) scale(1); filter: none; }
+}
+
+.divisao-slime-origem-rpg {
+    position: fixed !important;
+    z-index: 10020 !important;
+    box-sizing: border-box;
+    margin: 0 !important;
+    pointer-events: none !important;
+    transform-origin: center;
+    will-change: transform, filter, opacity;
+    animation: tremor-divisao-slime-rpg .82s ease-in both;
+}
+
+@keyframes tremor-divisao-slime-rpg {
+    0%, 10% { opacity: 1; transform: translate(0, 0) scale(1); filter: none; }
+    18% { transform: translate(-3px, 1px) rotate(-1.2deg) scale(1.02, .98); }
+    26% { transform: translate(4px, -1px) rotate(1.4deg) scale(.98, 1.03); }
+    34% { transform: translate(-5px, 0) rotate(-1.5deg) scale(1.04, .96); }
+    42% { transform: translate(5px, 1px) rotate(1.5deg) scale(.96, 1.05); }
+    50% { transform: translate(-4px, -1px) rotate(-1deg) scale(1.05, .94); }
+    58% { transform: translate(3px, 0) rotate(.8deg) scale(.95, 1.06); }
+    70% { opacity: 1; transform: translate(0, 0) scale(1.08, .9); filter: brightness(1.4) saturate(1.45); }
+    100% { opacity: 0; transform: translate(0, 4px) scale(.42, 1.18); filter: blur(2px) brightness(1.8) saturate(1.7); }
 }
 
 @media (max-width: 440px) {
@@ -6771,13 +7020,15 @@ body.modal-bau-aberto-rpg { overflow: hidden; }
 }
 
 .nascimento-esqueleto-rpg {
-    animation: nascimento-esqueleto-rpg .85s cubic-bezier(.18, .88, .25, 1.18) both;
+    pointer-events: none;
+    animation: nascimento-esqueleto-rpg 1.2s cubic-bezier(.18, .88, .25, 1.12) both;
 }
 
 @keyframes nascimento-esqueleto-rpg {
-    0% { opacity: 0; transform: translateY(32px) scale(.72); filter: grayscale(1) brightness(.45); }
-    55% { opacity: 1; transform: translateY(-5px) scale(1.05); filter: grayscale(.25) brightness(1.35); }
-    100% { transform: translateY(0) scale(1); filter: none; }
+    0%, 62% { opacity: 0; transform: translateY(25px) scale(.82); filter: grayscale(1) brightness(.5); }
+    76% { opacity: .42; transform: translateY(6px) scale(.94); filter: grayscale(.7) brightness(.9); }
+    90% { opacity: 1; transform: translateY(-3px) scale(1.025); filter: grayscale(.15) brightness(1.18); }
+    100% { opacity: 1; transform: translateY(0) scale(1); filter: none; }
 }
 
 .esqueleto-atacando-em-grupo {
@@ -6806,6 +7057,67 @@ body.modal-bau-aberto-rpg { overflow: hidden; }
     18% { opacity: 1; }
     72% { opacity: 1; transform: translate(calc(-50% + var(--esqueleto-x)), calc(-50% + var(--esqueleto-y))) rotate(12deg) scale(1); }
     100% { opacity: 0; transform: translate(calc(-50% + var(--esqueleto-x)), calc(-50% + var(--esqueleto-y))) rotate(-12deg) scale(.72); }
+}
+
+.montagem-nascimento-esqueleto-rpg {
+    position: fixed;
+    z-index: 10024;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+}
+
+.terra-abrindo-esqueleto-rpg {
+    position: absolute;
+    z-index: -1;
+    left: -36px;
+    top: 37px;
+    width: 72px;
+    height: 15px;
+    border-radius: 50%;
+    border-top: 3px solid rgba(74, 48, 31, .88);
+    background: radial-gradient(ellipse, rgba(103, 70, 43, .54), transparent 68%);
+    filter: drop-shadow(0 -3px 4px rgba(184, 158, 126, .38));
+    animation: terra-abrindo-esqueleto-rpg 1.05s ease-out both;
+}
+
+@keyframes terra-abrindo-esqueleto-rpg {
+    0% { opacity: 0; transform: scaleX(.15); }
+    18%, 72% { opacity: 1; transform: scaleX(1); }
+    100% { opacity: 0; transform: scaleX(.7); filter: blur(2px); }
+}
+
+.parte-esqueleto-rpg {
+    position: absolute;
+    left: 0;
+    top: 0;
+    display: block;
+    font-style: normal;
+    line-height: 1;
+    transform-origin: center;
+    filter: grayscale(.82) drop-shadow(0 1px 3px rgba(0, 0, 0, .75));
+    animation: montar-parte-esqueleto-rpg .88s cubic-bezier(.18, .72, .2, 1.12) both;
+}
+
+.parte-cranio-esqueleto-rpg { z-index: 3; font-size: 27px; }
+.parte-tronco-esqueleto-rpg { z-index: 2; font-size: 20px; }
+.parte-osso-esqueleto-rpg { z-index: 1; font-size: 17px; }
+
+@keyframes montar-parte-esqueleto-rpg {
+    0% {
+        opacity: 0;
+        transform: translate(calc(-50% + var(--parte-inicio-x)), calc(-50% + var(--parte-inicio-y))) rotate(-110deg) scale(.45);
+    }
+    14% { opacity: 1; }
+    68%, 84% {
+        opacity: 1;
+        transform: translate(calc(-50% + var(--parte-fim-x)), calc(-50% + var(--parte-fim-y))) rotate(var(--parte-rotacao)) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(calc(-50% + var(--parte-fim-x)), calc(-50% + var(--parte-fim-y))) rotate(var(--parte-rotacao)) scale(.94);
+        filter: grayscale(.4) brightness(1.35) blur(1px);
+    }
 }
 
 /* ZUMBI — o selo mostra quantos ataques consecutivos acertaram o mesmo alvo. */
@@ -6841,6 +7153,139 @@ body.modal-bau-aberto-rpg { overflow: hidden; }
     38% { box-shadow: 0 0 0 3px rgba(124, 197, 74, .72), 0 0 20px rgba(77, 145, 44, .72); filter: saturate(.72) hue-rotate(28deg); }
 }
 
+.infeccao-visual-zumbi-rpg {
+    position: absolute;
+    z-index: 6;
+    inset: -4px;
+    overflow: hidden;
+    border: 2px solid rgba(75, 164, 66, .7);
+    border-radius: inherit;
+    box-shadow: 0 0 13px rgba(68, 173, 72, .58), inset 0 0 16px rgba(42, 109, 43, .22);
+    pointer-events: none;
+    animation: aura-infeccao-zumbi-rpg 1.8s ease-in-out infinite;
+}
+
+.infeccao-visual-zumbi-rpg i {
+    position: absolute;
+    width: 2px;
+    height: 42%;
+    border-radius: 999px;
+    background: linear-gradient(to bottom, transparent, rgba(93, 221, 91, .88), transparent);
+    box-shadow: 0 0 5px rgba(79, 213, 78, .75);
+    transform-origin: bottom;
+    opacity: .62;
+}
+
+.infeccao-visual-zumbi-rpg i:nth-child(1) { left: 17%; top: 31%; transform: rotate(-31deg); }
+.infeccao-visual-zumbi-rpg i:nth-child(2) { right: 23%; top: 15%; height: 34%; transform: rotate(39deg); }
+.infeccao-visual-zumbi-rpg i:nth-child(3) { right: 13%; bottom: 8%; height: 29%; transform: rotate(-48deg); }
+
+@keyframes aura-infeccao-zumbi-rpg {
+    0%, 100% { opacity: .58; filter: brightness(.86); }
+    50% { opacity: .94; filter: brightness(1.24); }
+}
+
+.mordida-zumbi-rpg {
+    position: absolute;
+    z-index: 12;
+    left: 50%;
+    top: 43%;
+    width: 45px;
+    height: 38px;
+    pointer-events: none;
+    transform: translate(-50%, -50%) rotate(-12deg);
+    animation: mordida-zumbi-rpg .78s ease-out both;
+}
+
+.mordida-zumbi-rpg i {
+    position: absolute;
+    left: 9px;
+    width: 28px;
+    height: 5px;
+    border-radius: 70% 15% 70% 15%;
+    background: #557d39;
+    box-shadow: 0 0 5px rgba(102, 202, 75, .9);
+}
+
+.mordida-zumbi-rpg i:nth-child(1) { top: 6px; transform: rotate(9deg); }
+.mordida-zumbi-rpg i:nth-child(2) { top: 16px; transform: translateX(-5px) rotate(-4deg); }
+.mordida-zumbi-rpg i:nth-child(3) { top: 26px; transform: translateX(2px) rotate(7deg); }
+
+@keyframes mordida-zumbi-rpg {
+    0% { opacity: 0; transform: translate(-50%, -50%) rotate(-12deg) scale(1.7); filter: blur(2px); }
+    28%, 62% { opacity: 1; transform: translate(-50%, -50%) rotate(-12deg) scale(1); filter: none; }
+    100% { opacity: 0; transform: translate(-50%, -50%) rotate(-12deg) scale(.84); }
+}
+
+.fantasma-conversao-zumbi-rpg {
+    position: fixed !important;
+    z-index: 10028 !important;
+    box-sizing: border-box;
+    margin: 0 !important;
+    pointer-events: none !important;
+    transform-origin: center;
+    will-change: transform, opacity, filter;
+    animation: mover-conversao-zumbi-rpg 1.05s cubic-bezier(.2, .66, .25, 1) both;
+}
+
+@keyframes mover-conversao-zumbi-rpg {
+    0% { opacity: 1; transform: translate(0, 0) rotate(0) scale(1); filter: none; }
+    15% { transform: translate(-3px, 1px) rotate(-1deg) scale(1.015); }
+    25% { transform: translate(4px, -1px) rotate(1.2deg) scale(.985); filter: grayscale(.7) sepia(.35) hue-rotate(54deg); }
+    36% { transform: translate(-2px, 0) rotate(-.7deg) scale(1.02); filter: grayscale(1) sepia(.55) hue-rotate(52deg) brightness(.78); }
+    75% {
+        opacity: .82;
+        transform: translate(var(--conversao-zumbi-x), var(--conversao-zumbi-y)) rotate(1deg) scale(.9);
+        filter: grayscale(.88) sepia(.7) hue-rotate(47deg) brightness(.72);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(var(--conversao-zumbi-x), var(--conversao-zumbi-y)) rotate(0) scale(.78);
+        filter: grayscale(.7) sepia(.75) hue-rotate(45deg) blur(2px);
+    }
+}
+
+.chegada-conversao-zumbi-rpg {
+    pointer-events: none;
+    animation: chegada-conversao-zumbi-rpg 1.12s var(--atraso-conversao-zumbi, 0ms) ease-out both;
+}
+
+@keyframes chegada-conversao-zumbi-rpg {
+    0%, 57% { opacity: 0; transform: scale(.78); filter: grayscale(1) sepia(.7) hue-rotate(48deg) blur(2px); }
+    76% { opacity: .78; transform: scale(1.035); filter: grayscale(.55) sepia(.5) hue-rotate(45deg) brightness(1.18); }
+    100% { opacity: 1; transform: scale(1); filter: none; }
+}
+
+.fumaca-conversao-zumbi-rpg {
+    position: fixed;
+    z-index: 10030;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+}
+
+.fumaca-conversao-zumbi-rpg i {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 16px;
+    height: 11px;
+    border-radius: 50%;
+    background: rgba(76, 151, 68, .72);
+    box-shadow: 0 0 8px rgba(91, 205, 78, .48);
+    animation: fumaca-conversao-zumbi-rpg .76s ease-out both;
+}
+
+@keyframes fumaca-conversao-zumbi-rpg {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(.3); filter: blur(1px); }
+    22% { opacity: .9; }
+    100% {
+        opacity: 0;
+        transform: translate(calc(-50% + var(--fumaca-zumbi-x)), calc(-50% + var(--fumaca-zumbi-y))) scale(1.55);
+        filter: blur(3px);
+    }
+}
+
 /* AICER — acompanha os dois alvos diferentes necessários para a Passiva. */
 .carta-aicer-rpg {
     position: relative;
@@ -6872,6 +7317,121 @@ body.modal-bau-aberto-rpg { overflow: hidden; }
 @keyframes pulso-paralisia-aicer-rpg {
     0%, 100% { box-shadow: inherit; }
     42% { box-shadow: 0 0 0 3px rgba(173, 239, 255, .88), 0 0 22px rgba(74, 193, 236, .78); }
+}
+
+/* O Aicer lança três lascas pequenas em todo ataque. */
+.aicer-lancando-gelo-rpg {
+    animation: impulso-ataque-aicer-rpg .68s ease-out;
+}
+
+@keyframes impulso-ataque-aicer-rpg {
+    0%, 100% { transform: translate(0, 0) rotate(0); }
+    28% { transform: translateY(-5px) rotate(-1.5deg); }
+    52% { transform: translateY(2px) rotate(1deg); }
+}
+
+.fragmento-ataque-aicer-rpg {
+    position: fixed;
+    z-index: 10020;
+    width: 13px;
+    height: 22px;
+    border: 1px solid rgba(232, 253, 255, .95);
+    clip-path: polygon(50% 0, 100% 42%, 62% 100%, 0 67%);
+    background: linear-gradient(145deg, #f3fdff 4%, #9be8ff 43%, #4aa9df 72%, #dffaff 100%);
+    box-shadow: 0 0 7px rgba(114, 220, 255, .88);
+    pointer-events: none;
+    transform-origin: center;
+    animation: voo-fragmento-aicer-rpg .82s cubic-bezier(.2, .74, .25, 1) var(--aicer-gelo-atraso) both;
+}
+
+@keyframes voo-fragmento-aicer-rpg {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(.35) rotate(-35deg); }
+    13% { opacity: 1; }
+    48% {
+        opacity: 1;
+        transform: translate(calc(-50% + var(--aicer-gelo-meio-x)), calc(-50% + var(--aicer-gelo-meio-y) + var(--aicer-gelo-curva))) scale(1) rotate(160deg);
+    }
+    88% { opacity: 1; }
+    100% {
+        opacity: 0;
+        transform: translate(calc(-50% + var(--aicer-gelo-x)), calc(-50% + var(--aicer-gelo-y))) scale(.55) rotate(330deg);
+    }
+}
+
+.impacto-fragmentos-aicer-rpg {
+    animation: impacto-fragmentos-aicer-rpg .58s ease-out;
+}
+
+@keyframes impacto-fragmentos-aicer-rpg {
+    0%, 100% { filter: none; }
+    35% { filter: brightness(1.34) saturate(.72); }
+    60% { filter: brightness(1.1) drop-shadow(0 0 8px rgba(120, 225, 255, .85)); }
+}
+
+/* Ao completar a Passiva, cristais maiores surgem do chão ou caem do céu. */
+.congelamento-aicer-rpg {
+    position: absolute;
+    z-index: 12;
+    inset: -9px;
+    overflow: visible;
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.congelamento-aicer-rpg b {
+    position: absolute;
+    inset: 4px;
+    border-radius: inherit;
+    background: radial-gradient(circle, rgba(225, 252, 255, .52), rgba(102, 208, 244, .12) 55%, transparent 76%);
+    animation: clarao-congelamento-aicer-rpg 1.12s ease-out both;
+}
+
+.congelamento-aicer-rpg i {
+    position: absolute;
+    width: 13px;
+    height: 39px;
+    border: 1px solid rgba(238, 254, 255, .95);
+    clip-path: polygon(50% 0, 100% 42%, 68% 100%, 30% 83%, 0 42%);
+    background: linear-gradient(100deg, rgba(239, 253, 255, .96), rgba(113, 218, 250, .86) 45%, rgba(54, 145, 207, .9));
+    box-shadow: 0 0 9px rgba(108, 221, 255, .82);
+    animation: surgir-cristal-aicer-rpg 1.08s cubic-bezier(.16, .75, .28, 1) var(--gelo-aicer-atraso) both;
+}
+
+.origem-chao-aicer-rpg i { bottom: -7px; }
+.origem-ceu-aicer-rpg i {
+    top: -7px;
+    transform: rotate(180deg);
+}
+
+@keyframes surgir-cristal-aicer-rpg {
+    0% { opacity: 0; transform: translate(0, 0) rotate(0) scale(.18); }
+    18% { opacity: 1; }
+    62% {
+        opacity: 1;
+        transform: translate(var(--gelo-aicer-x), var(--gelo-aicer-y)) rotate(var(--gelo-aicer-rotacao)) scale(var(--gelo-aicer-tamanho));
+    }
+    82% {
+        opacity: .92;
+        transform: translate(var(--gelo-aicer-x), var(--gelo-aicer-y)) rotate(var(--gelo-aicer-rotacao)) scale(var(--gelo-aicer-tamanho));
+    }
+    100% {
+        opacity: 0;
+        transform: translate(var(--gelo-aicer-x), var(--gelo-aicer-y)) rotate(var(--gelo-aicer-rotacao)) scale(.72);
+    }
+}
+
+@keyframes clarao-congelamento-aicer-rpg {
+    0%, 100% { opacity: 0; transform: scale(.72); }
+    38%, 70% { opacity: 1; transform: scale(1); }
+}
+
+.congelamento-forte-aicer-rpg {
+    animation: congelamento-forte-aicer-rpg 1.15s ease-out;
+}
+
+@keyframes congelamento-forte-aicer-rpg {
+    0%, 100% { filter: none; }
+    42% { filter: brightness(1.32) saturate(.62) drop-shadow(0 0 10px rgba(103, 218, 255, .92)); }
 }
 
 .impacto-grupo-esqueleto-rpg {
@@ -6917,9 +7477,178 @@ body.modal-bau-aberto-rpg { overflow: hidden; }
     pointer-events: none;
 }
 
+/* Uma pequena projeção do Ecto voa como um espírito e atravessa o alvo. */
+.ecto-projetando-rpg {
+    animation: impulso-projecao-ecto-rpg .72s ease-out;
+}
+
+@keyframes impulso-projecao-ecto-rpg {
+    0%, 100% { transform: translate(0, 0); }
+    28% { transform: translateY(-5px) scale(1.025); }
+    58% { transform: translateY(2px) scale(.99); }
+}
+
+.projecao-ecto-rpg {
+    position: fixed;
+    z-index: 10030;
+    width: 46px;
+    height: 54px;
+    border-radius: 48% 48% 42% 42%;
+    background: radial-gradient(circle at 50% 40%, rgba(220, 195, 255, .6), rgba(116, 68, 173, .28) 56%, transparent 72%);
+    box-shadow: 0 0 13px rgba(169, 115, 235, .75);
+    color: #d7bcff;
+    font-size: 34px;
+    line-height: 54px;
+    text-align: center;
+    pointer-events: none;
+    transform-origin: center;
+    animation: voo-projecao-ecto-rpg .9s cubic-bezier(.18, .7, .25, 1) both;
+}
+
+.projecao-ecto-rpg::before,
+.projecao-ecto-rpg::after {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    top: 19px;
+    width: 24px;
+    height: 17px;
+    border: 1px solid rgba(222, 199, 255, .72);
+    background: linear-gradient(135deg, rgba(192, 156, 239, .58), rgba(79, 41, 127, .08));
+    clip-path: polygon(0 48%, 100% 0, 72% 100%);
+}
+
+.projecao-ecto-rpg::before { right: 32px; transform: rotate(-18deg); }
+.projecao-ecto-rpg::after { left: 32px; transform: scaleX(-1) rotate(-18deg); }
+
+.projecao-ecto-rpg img {
+    position: absolute;
+    z-index: 1;
+    inset: 5px;
+    width: 36px;
+    height: 44px;
+    object-fit: contain;
+    opacity: .88;
+    filter: saturate(.62) hue-rotate(18deg) brightness(1.28) drop-shadow(0 0 4px rgba(214, 183, 255, .9));
+}
+
+.projecao-ecto-rpg i {
+    position: absolute;
+    z-index: 2;
+    left: 9px;
+    top: 26px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgba(207, 176, 248, .74);
+    box-shadow: 0 0 6px rgba(177, 119, 236, .82);
+    animation: rastro-projecao-ecto-rpg .55s ease-out infinite;
+}
+
+.projecao-ecto-rpg i:nth-of-type(2) { top: 17px; animation-delay: -.17s; }
+.projecao-ecto-rpg i:nth-of-type(3) { top: 35px; animation-delay: -.34s; }
+
+@keyframes voo-projecao-ecto-rpg {
+    0% { opacity: 0; transform: translate(-50%, -50%) scaleX(var(--ecto-direcao)) scale(.42); }
+    15% { opacity: .96; }
+    56% {
+        opacity: 1;
+        transform: translate(calc(-50% + var(--ecto-meio-x)), calc(-50% + var(--ecto-meio-y))) scaleX(var(--ecto-direcao)) scale(1.04);
+    }
+    78% { opacity: .94; }
+    100% {
+        opacity: 0;
+        transform: translate(calc(-50% + var(--ecto-x)), calc(-50% + var(--ecto-y))) scaleX(var(--ecto-direcao)) scale(.72);
+    }
+}
+
+@keyframes rastro-projecao-ecto-rpg {
+    0% { opacity: .76; transform: translateX(0) scale(1); }
+    100% { opacity: 0; transform: translateX(-25px) scale(.2); }
+}
+
+.impacto-toque-ecto-rpg {
+    animation: impacto-toque-ecto-rpg .62s ease-out;
+}
+
+@keyframes impacto-toque-ecto-rpg {
+    0%, 100% { filter: none; }
+    34% { filter: brightness(1.22) saturate(.52) drop-shadow(0 0 10px rgba(170, 112, 230, .9)); }
+    62% { filter: brightness(.88) saturate(.6); }
+}
+
+.atributo-arrancado-ecto-rpg {
+    position: absolute;
+    z-index: 15;
+    left: 50%;
+    top: 31%;
+    width: 28px;
+    height: 28px;
+    border: 1px solid rgba(229, 208, 255, .9);
+    border-radius: 50%;
+    background: rgba(54, 28, 83, .88);
+    box-shadow: 0 0 11px rgba(172, 112, 235, .85);
+    color: #eadcff;
+    font: 700 19px/26px Georgia, serif;
+    text-align: center;
+    pointer-events: none;
+    animation: atributo-arrancado-ecto-rpg .68s ease-out both;
+}
+
+@keyframes atributo-arrancado-ecto-rpg {
+    0% { opacity: 0; transform: translate(-50%, 4px) scale(.35) rotate(0); }
+    26% { opacity: 1; transform: translate(-50%, -3px) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -52px) scale(.48) rotate(95deg); }
+}
+
 /* 👹 FRAGUER — contador discreto e uma curta condensação visual na fusão. */
 .carta-fraguer-rpg {
     box-shadow: 0 0 0 2px rgba(217, 73, 92, .7), 0 0 13px rgba(182, 46, 74, .35);
+    transition: box-shadow .24s ease, filter .24s ease;
+}
+
+.carta-fraguer-rpg.energia-fraguer-1-rpg {
+    box-shadow: 0 0 0 2px rgba(217, 73, 92, .66), 0 0 10px rgba(182, 46, 74, .3);
+}
+
+.carta-fraguer-rpg.energia-fraguer-2-rpg {
+    box-shadow: 0 0 0 2px rgba(230, 77, 92, .76), 0 0 16px rgba(208, 47, 69, .48);
+}
+
+.carta-fraguer-rpg.energia-fraguer-3-rpg {
+    box-shadow: 0 0 0 3px rgba(238, 82, 92, .82), 0 0 22px rgba(218, 42, 64, .62);
+}
+
+.carta-fraguer-rpg.energia-fraguer-4-rpg {
+    box-shadow: 0 0 0 3px rgba(255, 133, 79, .92), 0 0 29px rgba(230, 45, 57, .76);
+}
+
+.pulso-energia-fraguer-rpg {
+    animation: pulso-energia-fraguer-rpg .78s ease-out;
+}
+
+@keyframes pulso-energia-fraguer-rpg {
+    0%, 100% { filter: none; transform: translateY(0) scale(1); }
+    42% { filter: brightness(1.38) saturate(1.3); transform: translateY(-3px) scale(1.035); }
+}
+
+.raio-conexao-fraguer-rpg {
+    position: fixed;
+    z-index: 10018;
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(255, 142, 90, .12), #ff566c 38%, #ffbc69 58%, rgba(205, 41, 70, .12));
+    box-shadow: 0 0 7px rgba(238, 61, 88, .88), 0 0 12px rgba(230, 75, 59, .54);
+    transform-origin: left center;
+    pointer-events: none;
+    animation: raio-conexao-fraguer-rpg .78s ease-out var(--atraso-fraguer) both;
+}
+
+@keyframes raio-conexao-fraguer-rpg {
+    0% { opacity: 0; transform: rotate(var(--angulo-fraguer)) scaleX(0); }
+    24% { opacity: .95; }
+    58% { opacity: 1; transform: rotate(var(--angulo-fraguer)) scaleX(1); }
+    100% { opacity: 0; transform: rotate(var(--angulo-fraguer)) scaleX(1); }
 }
 
 .selo-grupo-fraguer-rpg {
@@ -6940,7 +7669,7 @@ body.modal-bau-aberto-rpg { overflow: hidden; }
 
 .carta-fraguer-fundido-rpg,
 .fusao-fraguer-rpg {
-    animation: fusao-fraguer-entrada .75s ease-out both;
+    animation: fusao-fraguer-entrada .75s ease-out .42s both;
     box-shadow: 0 0 0 3px rgba(255, 184, 70, .84), 0 0 24px rgba(229, 65, 70, .58) !important;
 }
 
@@ -6948,6 +7677,55 @@ body.modal-bau-aberto-rpg { overflow: hidden; }
     0% { opacity: 0; transform: scale(.45); filter: brightness(2.1) saturate(1.7); }
     58% { opacity: 1; transform: scale(1.1); filter: brightness(1.4) saturate(1.35); }
     100% { transform: scale(1); filter: none; }
+}
+
+.sombra-fusao-fraguer-rpg {
+    position: fixed;
+    z-index: 10022;
+    width: 52px;
+    height: 66px;
+    border-radius: 48%;
+    background: radial-gradient(circle, rgba(255, 137, 79, .68), rgba(207, 34, 67, .28) 57%, transparent 74%);
+    box-shadow: 0 0 15px rgba(242, 62, 74, .76);
+    pointer-events: none;
+    animation: sombra-fusao-fraguer-rpg .88s cubic-bezier(.2, .72, .2, 1) both;
+}
+
+.sombra-fusao-fraguer-rpg img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    opacity: .72;
+    filter: sepia(.32) saturate(2.1) hue-rotate(306deg) brightness(1.22) drop-shadow(0 0 5px #ff5369);
+}
+
+@keyframes sombra-fusao-fraguer-rpg {
+    0% { opacity: .92; transform: translate(-50%, -50%) scale(1) rotate(0); }
+    56% { opacity: .9; }
+    100% {
+        opacity: 0;
+        transform: translate(calc(-50% + var(--fusao-fraguer-x)), calc(-50% + var(--fusao-fraguer-y))) scale(.12) rotate(var(--fusao-fraguer-giro));
+    }
+}
+
+.nucleo-fusao-fraguer-rpg {
+    position: fixed;
+    z-index: 10021;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff0b1;
+    box-shadow: 0 0 13px #ffb05f, 0 0 28px #ef3c57;
+    pointer-events: none;
+    animation: nucleo-fusao-fraguer-rpg 1.14s ease-out both;
+}
+
+@keyframes nucleo-fusao-fraguer-rpg {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(.2); }
+    42% { opacity: .75; transform: translate(-50%, -50%) scale(.7); }
+    68% { opacity: 1; transform: translate(-50%, -50%) scale(1.25); }
+    82% { opacity: .9; transform: translate(-50%, -50%) scale(2.8); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(4.1); }
 }
 
 /* 🔮 SPIRITISTA — um brilho curto mostra cada alma convertida em ataque. */
@@ -6964,25 +7742,205 @@ body.modal-bau-aberto-rpg { overflow: hidden; }
     40% { filter: brightness(1.5) saturate(1.35); transform: translateY(-4px); box-shadow: 0 0 25px rgba(116, 230, 255, .85); }
 }
 
-/* ➖ 7 NEGATIVO — pulso curto entre o alvo e a carta que absorve o ataque. */
+.alma-voando-spiritista-rpg {
+    position: fixed;
+    z-index: 10028;
+    width: 22px;
+    height: 27px;
+    border: 1px solid rgba(219, 249, 255, .86);
+    border-radius: 52% 48% 45% 55%;
+    background: radial-gradient(circle at 45% 34%, #f0fdff 0 15%, #8be3f6 34%, rgba(73, 148, 213, .72) 62%, rgba(94, 81, 174, .12) 78%);
+    box-shadow: 0 0 9px rgba(126, 226, 247, .9), 0 0 17px rgba(89, 129, 215, .56);
+    pointer-events: none;
+    animation: voo-alma-spiritista-rpg 1s cubic-bezier(.2, .72, .2, 1) var(--alma-spiritista-atraso) both;
+}
+
+.alma-voando-spiritista-rpg::after {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 21px;
+    width: 10px;
+    height: 17px;
+    background: linear-gradient(to bottom, rgba(116, 210, 238, .62), transparent);
+    clip-path: polygon(0 0, 100% 0, 66% 100%, 46% 58%, 20% 92%);
+}
+
+.alma-voando-spiritista-rpg i {
+    position: absolute;
+    left: 7px;
+    top: 10px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: rgba(192, 243, 255, .86);
+    box-shadow: 0 0 5px rgba(116, 219, 245, .86);
+    animation: rastro-alma-spiritista-rpg .54s ease-out infinite;
+}
+
+.alma-voando-spiritista-rpg i:nth-child(2) { animation-delay: -.18s; }
+.alma-voando-spiritista-rpg i:nth-child(3) { animation-delay: -.36s; }
+
+@keyframes voo-alma-spiritista-rpg {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(.25) rotate(-8deg); }
+    15% { opacity: .95; transform: translate(-50%, -62%) scale(.92) rotate(4deg); }
+    56% {
+        opacity: 1;
+        transform: translate(calc(-50% + var(--alma-spiritista-meio-x)), calc(-50% + var(--alma-spiritista-meio-y))) scale(1.03) rotate(-5deg);
+    }
+    86% { opacity: .92; }
+    100% {
+        opacity: 0;
+        transform: translate(calc(-50% + var(--alma-spiritista-x)), calc(-50% + var(--alma-spiritista-y))) scale(.28) rotate(12deg);
+    }
+}
+
+@keyframes rastro-alma-spiritista-rpg {
+    0% { opacity: .7; transform: translate(0, 0) scale(.9); }
+    100% { opacity: 0; transform: translate(-13px, 16px) scale(.18); }
+}
+
+/* ➖ 7 NEGATIVO — o reverso do Vampi7: rouba ataque em vez de vida. */
 .carta-sete-negativo-rpg {
     box-shadow: 0 0 0 2px rgba(183, 159, 197, .72), 0 0 14px rgba(116, 89, 134, .4);
+}
+
+.sete-negativo-investida-rpg {
+    animation: saida-sete-negativo-rpg .72s ease-out;
 }
 
 .sete-negativo-roubando-rpg {
     animation: sete-negativo-absorvendo .8s ease-out;
 }
 
-.alvo-roubo-sete-negativo-rpg {
-    animation: alvo-sete-negativo-perdendo .8s ease-out;
+.sombra-investida-sete-negativo-rpg {
+    position: fixed;
+    z-index: 10051;
+    left: 0;
+    top: 0;
+    width: 36px;
+    height: 42px;
+    margin: -21px 0 0 -18px;
+    border-radius: 48%;
+    background: radial-gradient(circle, rgba(201, 169, 224, .45), rgba(74, 48, 91, .32) 58%, transparent 74%);
+    box-shadow: 0 0 11px rgba(145, 100, 173, .72);
+    pointer-events: none;
+    opacity: 0;
+    animation: investida-sete-negativo-rpg .84s cubic-bezier(.3, .01, .18, 1) forwards;
+}
+
+.sombra-investida-sete-negativo-rpg b {
+    position: absolute;
+    inset: 1px 0 0;
+    color: #1c1122;
+    font: 800 35px/40px Georgia, serif;
+    text-align: center;
+    text-shadow: 0 0 5px rgba(209, 169, 233, .84);
+    transform: scaleX(-1);
+}
+
+.sombra-investida-sete-negativo-rpg i {
+    position: absolute;
+    left: 4px;
+    top: 18px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(176, 135, 199, .72);
+    box-shadow: 0 0 5px rgba(158, 103, 190, .78);
+    animation: rastro-sete-negativo-rpg .52s ease-out infinite;
+}
+
+.sombra-investida-sete-negativo-rpg i:nth-of-type(2) { top: 10px; animation-delay: -.17s; }
+.sombra-investida-sete-negativo-rpg i:nth-of-type(3) { top: 29px; animation-delay: -.34s; }
+
+.espada-roubada-sete-negativo-rpg,
+.retorno-vazio-sete-negativo-rpg {
+    position: fixed;
+    z-index: 10053;
+    left: 0;
+    top: 0;
+    width: 30px;
+    height: 34px;
+    margin: -17px 0 0 -15px;
+    pointer-events: none;
+    opacity: 0;
+    text-align: center;
+    animation: retorno-sete-negativo-rpg .69s cubic-bezier(.28, .02, .2, 1) forwards;
+}
+
+.espada-roubada-sete-negativo-rpg {
+    font-size: 25px;
+    line-height: 34px;
+    filter: grayscale(1) brightness(.48) sepia(.35) hue-rotate(235deg) drop-shadow(0 0 5px rgba(168, 116, 199, .94));
+}
+
+.retorno-vazio-sete-negativo-rpg {
+    color: rgba(74, 54, 84, .7);
+    font: 800 28px/34px Georgia, serif;
+    text-shadow: 0 0 4px rgba(153, 111, 178, .52);
+    transform-origin: center;
+}
+
+.retorno-vazio-sete-negativo-rpg b {
+    display: block;
+    transform: scaleX(-1);
+}
+
+.impacto-roubo-sete-negativo-rpg {
+    animation: alvo-sete-negativo-perdendo .64s ease-out;
+}
+
+@keyframes saida-sete-negativo-rpg {
+    0%, 100% { transform: translateX(0); filter: none; }
+    28% { transform: translateX(-3px) scale(.985); filter: brightness(.82) saturate(.65); }
+    56% { transform: translateX(3px) scale(1.025); filter: brightness(1.14) saturate(.72); }
+}
+
+@keyframes investida-sete-negativo-rpg {
+    0% {
+        opacity: 0;
+        transform: translate3d(var(--sete-inicio-x), var(--sete-inicio-y), 0) rotate(-9deg) scale(.25);
+    }
+    16% { opacity: .92; }
+    46% {
+        opacity: 1;
+        transform: translate3d(var(--sete-meio-x), var(--sete-meio-y), 0) rotate(8deg) scale(1.02);
+    }
+    78% { opacity: .94; }
+    100% {
+        opacity: 0;
+        transform: translate3d(var(--sete-fim-x), var(--sete-fim-y), 0) rotate(-5deg) scale(.24);
+    }
+}
+
+@keyframes retorno-sete-negativo-rpg {
+    0% {
+        opacity: 0;
+        transform: translate3d(var(--sete-retorno-inicio-x), var(--sete-retorno-inicio-y), 0) scale(.25) rotate(0);
+    }
+    18% { opacity: 1; }
+    54% {
+        opacity: .96;
+        transform: translate3d(var(--sete-retorno-meio-x), var(--sete-retorno-meio-y), 0) scale(1) rotate(-18deg);
+    }
+    100% {
+        opacity: 0;
+        transform: translate3d(var(--sete-retorno-fim-x), var(--sete-retorno-fim-y), 0) scale(.3) rotate(-42deg);
+    }
+}
+
+@keyframes rastro-sete-negativo-rpg {
+    0% { opacity: .72; transform: translate(0, 0) scale(.9); }
+    100% { opacity: 0; transform: translate(-17px, 8px) scale(.16); }
 }
 
 @keyframes sete-negativo-absorvendo {
     0%, 100% { transform: translateY(0); filter: none; }
-    42% { transform: translateY(-3px) scale(1.035); filter: brightness(1.42) saturate(.55); box-shadow: 0 0 23px rgba(201, 177, 215, .83); }
+    42% { transform: translateY(-3px) scale(1.04); filter: brightness(1.42) saturate(.64); box-shadow: 0 0 26px rgba(181, 126, 211, .88); }
 }
 
 @keyframes alvo-sete-negativo-perdendo {
     0%, 100% { filter: none; }
-    45% { filter: grayscale(.8) brightness(.7); box-shadow: 0 0 16px rgba(88, 71, 99, .75); }
+    42% { filter: grayscale(.82) brightness(.68); box-shadow: 0 0 18px rgba(94, 65, 111, .82); }
 }

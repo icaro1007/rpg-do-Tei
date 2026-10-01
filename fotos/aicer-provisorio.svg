@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420" role="img" aria-labelledby="titulo descricao">
+  <title id="titulo">Aicer provisório</title>
+  <desc id="descricao">Criatura de gelo usada até a arte definitiva do Aicer ficar pronta.</desc>
+  <defs>
+    <linearGradient id="fundo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#12304b"/>
+      <stop offset="1" stop-color="#071420"/>
+    </linearGradient>
+    <linearGradient id="gelo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e8fbff"/>
+      <stop offset=".52" stop-color="#79d9f4"/>
+      <stop offset="1" stop-color="#2d7eb4"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="284" height="404" rx="18" fill="url(#fundo)" stroke="#a9edff" stroke-width="8"/>
+  <path d="m150 42 54 78-18 65 50 118-86 61-86-61 50-118-18-65z" fill="url(#gelo)" stroke="#e9fcff" stroke-width="6" stroke-linejoin="round"/>
+  <path d="m150 57-17 112 18 51-1 126M101 126l49 43 51-43M79 297l71-77 72 77" fill="none" stroke="#ffffff" stroke-width="5" opacity=".7"/>
+  <path d="m118 184 24 13-25 17M182 184l-24 13 25 17" fill="none" stroke="#123852" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="126" cy="196" r="5" fill="#081923"/>
+  <circle cx="174" cy="196" r="5" fill="#081923"/>
+  <path d="M133 237h34" stroke="#17445f" stroke-width="7" stroke-linecap="round"/>
+  <path d="m58 80 12 20 23 4-17 16 4 23-22-11-21 11 4-23-17-16 23-4zM240 62l8 14 16 3-12 11 3 16-15-8-15 8 3-16-12-11 16-3z" fill="#c9f6ff" opacity=".86"/>
+  <text x="150" y="365" text-anchor="middle" fill="#effcff" font-family="Arial, sans-serif" font-size="32" font-weight="800">AICER</text>
+  <text x="150" y="393" text-anchor="middle" fill="#9de6fa" font-family="Arial, sans-serif" font-size="16">ARTE PROVISÓRIA</text>
+</svg>

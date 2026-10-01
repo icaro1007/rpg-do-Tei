@@ -2,6 +2,41 @@ let deckJ1 = []; let maoJ1 = [];
 let deckJ2 = []; let maoJ2 = [];
 let turnoAtivo = 1; 
 let jogoIniciado = false;
+
+// Passivas, Especiais, suportes e poções são ações livres: podem ser ativados
+// por qualquer lado a qualquer momento. Quando uma dessas ações já encerrava o
+// turno pelas regras antigas, só troca a vez se pertencer ao jogador da vez.
+function obterLadoRealDaCarta(idUnico) {
+    let pacote = idUnico ? document.getElementById("pacote-" + String(idUnico).replace("pacote-", "")) : null;
+    if (pacote?.closest("#campo-j1, #mao-j1")) return "j1";
+    if (pacote?.closest("#campo-j2, #mao-j2")) return "j2";
+    return null;
+}
+
+// Cliques feitos pelo robô só podem concluir escolhas iniciadas por cartas do
+// próprio robô. Cliques manuais continuam livres para os dois lados, inclusive
+// fora do turno, como nas regras atuais da arena.
+function cliquePodeResolverAcaoPendente(idDonoDaAcao) {
+    if (window.__rpgCliqueAutomaticoBot !== true) return true;
+    return obterLadoRealDaCarta(idDonoDaAcao) === "j2";
+}
+
+function ehVezDaCarta(idUnico) {
+    let lado = obterLadoRealDaCarta(idUnico);
+    return !!lado && jogoIniciado && turnoAtivo === (lado === "j1" ? 1 : 2);
+}
+
+function passarTurnoSeForVezDaCarta(idUnico) {
+    if (!ehVezDaCarta(idUnico)) return false;
+    passarTurno();
+    return true;
+}
+
+function passarTurnoSeForVezDoLado(lado) {
+    if (!jogoIniciado || turnoAtivo !== (lado === "j1" ? 1 : 2)) return false;
+    passarTurno();
+    return true;
+}
 let faseAbertura = false;      // 🆕 fase de jogada simultânea antes do 1º turno
 let aberturaEscolhaJ1 = null;  // 🆕 id da carta que o jogador escolheu pra abertura
 let aberturaEscolhaJ2 = null;  // 🆕 id da carta que o oponente escolheu pra abertura
@@ -46,6 +81,41 @@ var modoProtecaoBarril = false;
 var modoProtecaoBarrilInimigo = false;
 var idBarrilProtetor = null;
 var cartasProtegidas = {}; // Guarda quem está sendo protegido por qual Barril
+
+function podeVincularProtecaoBarril(idAlvo, idProtetor) {
+    idAlvo = String(idAlvo).replace("pacote-", "");
+    idProtetor = String(idProtetor).replace("pacote-", "");
+    if (idAlvo === idProtetor) return false;
+
+    let alvo = document.getElementById("pacote-" + idAlvo);
+    let protetor = document.getElementById("pacote-" + idProtetor);
+    let campoAlvo = alvo && alvo.closest("#campo-j1, #campo-j2");
+    if (!campoAlvo || !protetor || protetor.closest("#campo-j1, #campo-j2") !== campoAlvo) return false;
+
+    // Barris podem formar uma cadeia (A protege B, B protege C), mas nunca um
+    // círculo: dois Barris protegendo um ao outro ficariam impossíveis de atacar.
+    let atual = idProtetor;
+    let visitados = new Set();
+    while (atual && !visitados.has(atual)) {
+        if (atual === idAlvo) return false;
+        visitados.add(atual);
+        atual = cartasProtegidas[atual] ? String(cartasProtegidas[atual]) : null;
+    }
+    return true;
+}
+
+function vincularProtecaoBarril(idAlvo, idProtetor) {
+    if (!podeVincularProtecaoBarril(idAlvo, idProtetor)) {
+        narrar("❌ Escolha outra carta aliada. Um Barril não pode proteger a si mesmo nem formar um círculo de proteção.");
+        return false;
+    }
+    idAlvo = String(idAlvo).replace("pacote-", "");
+    idProtetor = String(idProtetor).replace("pacote-", "");
+    cartasProtegidas[idAlvo] = idProtetor;
+    ativarVisualProtecaoBarril(idAlvo, idProtetor);
+    narrar("🛡️ Vínculo criado! O Barril agora protege esta carta, mesmo que ela também seja um Barril.");
+    return true;
+}
 let modoBruxoTransformar = false;
 let modoBruxoRoubar = false;
 let idBruxoAtivo = null;
@@ -60,6 +130,7 @@ let timersFogoBumerskeleton = {}; // permite renovar o fogo visual sem um tempor
 let modoEspecialBumerskeleton = false; // 🪃 Especial do Bumerskeleton acionado ANTES de atacar
 let idBumerskeletonEspecialAtivo = null;
 let especialFixoBumerskeleton = {}; // idUnico -> 3 (fogo) ou 5 (gelo), definido no primeiro sucesso
+let recargaGeloBumerskeleton = {}; // idUnico -> 0/1: gelo fixo congela em ataques alternados
 let especialFixoSeparado = {}; // idUnico -> true: a dupla ataca separada permanentemente depois do primeiro 6
 let bonusVampi7Sozinho = {}; // idUnico -> true enquanto o +1 de dano por ser a última carta estiver ativo
 let tabelaDanoBumerangue = [1, 2, 4, 4, 4, 4, 4, 4, 4, 4]; // Escala pela ORDEM do golpe na cadeia: 1º alvo leva 1, 2º leva 2, do 3º em diante 4 cada (teto pra não ficar forte demais)
@@ -74,7 +145,7 @@ let modoAjusteThiago = false; // aguardando clique na carta que vai ter um atrib
 let idThiagoAtivo = null;
 let fogueiraTicks = { j1: [], j2: [] }; // cada Fogueira ativa guarda sua duração e seu efeito visual
 let proximoIdVisualFogueira = 1;
-let parceriaSeparado = {}; // idSeparado -> idParceiro (carta que "junta" pra atacar com ele)
+let parceriaSeparado = {}; // idSeparado -> idParceiro; pode formar correntes sem ciclos
 let modoParceriaSeparado = false; // aguardando clique na carta aliada que vai virar parceira
 let idSeparadoParceriaAtivo = null;
 let separadaoDividido = {}; // idSeparado -> quantos ataques da dupla ainda faltam (habilidade dado 6)
@@ -83,7 +154,7 @@ let ignorarInterceptacaoSeparadoUmaVez = false; // o botão manual pode encerrar
 let modoPrenderNoTempo = false; // aguardando clique na carta inimiga que vai ficar presa no tempo
 let idPrenderNoTempoAtivo = null;
 let portableDuracao = {}; // idUnico -> passagens de turno restantes até a bateria acabar (2 rodadas = 4 passagens)
-let ladraoUsosPorLado = { j1: 0, j2: 0 }; // zera a cada passagem de turno — 1 uso da passiva do Ladrão por turno, por lado
+let ladraoUsosPorCarta = {}; // idUnico -> true; cada Ladrão possui sua própria tentativa por turno
 let cemiterio = { j1: [], j2: [] }; // guarda as cartas mortas de cada lado, prontas pra Reviverta trazer de volta
 let revivertaPendente = null; // { idItem, ehAliado } enquanto o cemitério está aberto aguardando escolha
 let crackerPendente = null; // { idItem, ehAliado } enquanto a tela de roubo do Cracker está aberta aguardando escolha
@@ -281,6 +352,12 @@ function removerEfeitoVelocidade(idUnico) {
 let origensTransformacaoOrk = {};
 
 function guardarOrigemTransformacaoOrk(nomeCarta, idUnico, pacoteCarta) {
+    if (typeof window.rpgPrepararAnimacaoDivisaoSlime === "function") {
+        window.rpgPrepararAnimacaoDivisaoSlime(idUnico);
+    }
+    if (typeof window.rpgPrepararAlmaSpiritista === "function" && pacoteCarta) {
+        window.rpgPrepararAlmaSpiritista(idUnico, pacoteCarta);
+    }
     if (nomeCarta !== "Ork" || !pacoteCarta) return;
 
     let retangulo = pacoteCarta.getBoundingClientRect();
@@ -290,7 +367,7 @@ function guardarOrigemTransformacaoOrk(nomeCarta, idUnico, pacoteCarta) {
         top: retangulo.top,
         width: retangulo.width,
         height: retangulo.height,
-        imagem: imagem ? imagem.src : "ork.png"
+        imagem: imagem ? imagem.src : caminhoImagemRpg("ork.png")
     };
 }
 
@@ -426,7 +503,7 @@ function animarBruxoVirandoPocao(idBruxo) {
 
     let imagem = document.createElement("img");
     imagem.className = "imagem-bruxo-encolhendo";
-    imagem.src = imagemOriginal ? imagemOriginal.src : "bruxo.png";
+    imagem.src = imagemOriginal ? imagemOriginal.src : caminhoImagemRpg("bruxo.png");
     imagem.alt = "";
     efeito.appendChild(imagem);
 
@@ -867,11 +944,12 @@ function animarLancamentoBarrilGoblin(idBarril, idAlvo) {
     setTimeout(() => { if (barril.parentNode) barril.remove(); }, 880);
 }
 
-function criarVooBumerangue(origem, destino, atraso = 0, retornando = false) {
+function criarVooBumerangue(origem, destino, atraso = 0, retornando = false, idBumerskeleton = null) {
     if (!origem || !destino) return;
 
     let bumerangue = document.createElement("span");
     bumerangue.className = "bumerangue-voando" + (retornando ? " bumerangue-retornando" : "");
+    if (idBumerskeleton) bumerangue.dataset.bumerangueDono = idBumerskeleton;
     bumerangue.textContent = "🪃";
     bumerangue.setAttribute("aria-hidden", "true");
     bumerangue.style.left = origem.x + "px";
@@ -897,7 +975,7 @@ function iniciarTrajetoVisualBumerangue(idBumerskeleton, idPrimeiroAlvo) {
     trajetosVisuaisBumerangue[idBumerskeleton] = [];
     if (origem) trajetosVisuaisBumerangue[idBumerskeleton].push(origem);
     if (destino) trajetosVisuaisBumerangue[idBumerskeleton].push(destino);
-    criarVooBumerangue(origem, destino, 0, false);
+    criarVooBumerangue(origem, destino, 0, false, idBumerskeleton);
 
     return destino || origem;
 }
@@ -908,7 +986,7 @@ function registrarRicocheteVisualBumerangue(idBumerskeleton, origem, pacoteDesti
 
     if (!trajetosVisuaisBumerangue[idBumerskeleton]) trajetosVisuaisBumerangue[idBumerskeleton] = [];
     trajetosVisuaisBumerangue[idBumerskeleton].push(destino);
-    criarVooBumerangue(origem, destino, atraso, false);
+    criarVooBumerangue(origem, destino, atraso, false, idBumerskeleton);
     return destino;
 }
 
@@ -918,7 +996,7 @@ function animarRetornoBumerangue(idBumerskeleton) {
 
     let atraso = 0;
     for (let i = pontos.length - 1; i > 0; i--) {
-        criarVooBumerangue(pontos[i], pontos[i - 1], atraso, true);
+        criarVooBumerangue(pontos[i], pontos[i - 1], atraso, true, idBumerskeleton);
         atraso += 0.34;
     }
 }
@@ -1086,8 +1164,67 @@ function animarAtaqueAreaCavaleiro(idCavaleiro, pacoteAlvoPrincipal, alvosAtingi
     }, especialAtivo ? 1050 : 880);
 }
 
+let contadorHistoricoNarrador = 0;
+
+function limparHistoricoNarrador() {
+    contadorHistoricoNarrador = 0;
+    let lista = document.getElementById("lista-historico-narrador");
+    if (lista) lista.innerHTML = "";
+    let quantidade = document.getElementById("quantidade-historico-narrador");
+    if (quantidade) quantidade.textContent = "0";
+    let historico = document.getElementById("historico-narrador");
+    if (historico) historico.open = false;
+}
+
 function narrar(mensagem) {
-    document.getElementById("painel-narrador").innerText = mensagem;
+    let texto = String(mensagem ?? "").trim();
+    if (!texto) return;
+
+    let painel = document.getElementById("painel-narrador");
+    if (painel) {
+        painel.innerText = texto;
+        painel.classList.remove("narrador-atualizando");
+        void painel.offsetWidth;
+        painel.classList.add("narrador-atualizando");
+    }
+
+    let lista = document.getElementById("lista-historico-narrador");
+    if (!lista) return;
+
+    let ultima = lista.firstElementChild;
+    if (ultima && ultima.dataset.mensagem === texto) {
+        let repeticoes = (parseInt(ultima.dataset.repeticoes, 10) || 1) + 1;
+        ultima.dataset.repeticoes = String(repeticoes);
+        let selo = ultima.querySelector(".repeticao-narrador");
+        if (!selo) {
+            selo = document.createElement("small");
+            selo.className = "repeticao-narrador";
+            ultima.appendChild(selo);
+        }
+        selo.textContent = `×${repeticoes}`;
+        return;
+    }
+
+    contadorHistoricoNarrador++;
+    let item = document.createElement("li");
+    item.dataset.mensagem = texto;
+    item.dataset.repeticoes = "1";
+
+    let ordem = document.createElement("small");
+    ordem.className = "ordem-narrador";
+    ordem.textContent = `#${contadorHistoricoNarrador}`;
+
+    let conteudo = document.createElement("span");
+    conteudo.textContent = texto;
+    item.appendChild(ordem);
+    item.appendChild(conteudo);
+    lista.prepend(item);
+
+    // Mantém o painel leve mesmo em partidas muito longas.
+    while (lista.children.length > 30) lista.lastElementChild.remove();
+    lista.scrollTop = 0;
+    let quantidade = document.getElementById("quantidade-historico-narrador");
+    if (quantidade) quantidade.textContent = String(lista.children.length);
 }
 
 // O Ctrl C/V mantém o próprio nome na tela, mas para as regras do jogo ele assume a
@@ -1095,6 +1232,26 @@ function narrar(mensagem) {
 function obterNomeEfetivoCarta(idUnico, nomeExibido) {
     let copia = (typeof ctrlV !== 'undefined' && ctrlV[idUnico]) ? ctrlV[idUnico] : null;
     return (copia && copia.nomeOriginal) ? copia.nomeOriginal : (nomeExibido || "");
+}
+
+function atacanteAtualEh(nomeCarta) {
+    let pacote = ultimoIdQueAtacou ? document.getElementById("pacote-" + ultimoIdQueAtacou) : null;
+    if (!pacote || cartaSilenciadaPeloEcto(ultimoIdQueAtacou)) return false;
+    let nomeExibido = pacote.querySelector(".nome-carta")?.innerText?.trim() || "";
+    return obterNomeEfetivoCarta(ultimoIdQueAtacou, nomeExibido) === nomeCarta;
+}
+
+function bumerangueAindaTemDono(idBumerskeleton) {
+    let pacote = document.getElementById("pacote-" + idBumerskeleton);
+    if (!pacote || cartaSilenciadaPeloEcto(idBumerskeleton)) return false;
+    let nomeExibido = pacote.querySelector(".nome-carta")?.innerText?.trim() || "";
+    return obterNomeEfetivoCarta(idBumerskeleton, nomeExibido) === "Bumerskeleton";
+}
+
+function removerVoosSemBumerskeleton() {
+    document.querySelectorAll(".bumerangue-voando[data-bumerangue-dono]").forEach(voo => {
+        if (!bumerangueAindaTemDono(voo.dataset.bumerangueDono)) voo.remove();
+    });
 }
 
 function cartaSilenciadaPeloEcto(idUnico) {
@@ -1152,7 +1309,7 @@ function desativarHabilidadesSilenciadas(idUnico) {
 
     [bonusUnidao, goblinJaAtacouNesteTurno, goblinAtaquesGanhos, viajantesJaUsaram,
         escudoGuerreiro, alvosDoBarril, barrilJaImpactou, splashBarbaroAtivo,
-        especialFixoBumerskeleton, especialFixoSeparado, bonusVampi7Sozinho,
+        especialFixoBumerskeleton, recargaGeloBumerskeleton, especialFixoSeparado, bonusVampi7Sozinho,
         cavalosDeTroiaAtivos, incendiarioCiclo, incendiarioAlvos,
         incendiarioFasesVisuais, separadaoDividido, separadaoAtacantesNaSequencia,
         portableDuracao, ctrlV
@@ -1163,6 +1320,7 @@ function desativarHabilidadesSilenciadas(idUnico) {
     if (typeof ladroesQueJaRoubaram !== "undefined") delete ladroesQueJaRoubaram[idUnico];
     if (typeof cavaleiroAtivado !== "undefined") delete cavaleiroAtivado[idUnico];
     if (typeof window.mensageirosEmArea !== "undefined") delete window.mensageirosEmArea[idUnico];
+    if (typeof limparFormaCriadorDoCtrl === "function") limparFormaCriadorDoCtrl(idUnico);
 
     Object.keys(parceriaSeparado).forEach(idSeparado => {
         if (idSeparado === idUnico || parceriaSeparado[idSeparado] === idUnico) {
@@ -1172,8 +1330,18 @@ function desativarHabilidadesSilenciadas(idUnico) {
         }
     });
     Object.keys(cartasProtegidas).forEach(idProtegido => {
-        if (cartasProtegidas[idProtegido] === idUnico) delete cartasProtegidas[idProtegido];
+        if (String(cartasProtegidas[idProtegido]) !== String(idUnico)) return;
+
+        // Se o Ecto apagar a habilidade de um Barril protetor, todas as cartas
+        // que dependiam DELE são libertadas na mesma hora. A proteção que outro
+        // Barril fornece à carta atingida continua existindo para ataques comuns.
+        if (typeof quebrarVisualProtecaoBarril === "function") {
+            quebrarVisualProtecaoBarril(idProtegido, false);
+        }
+        delete cartasProtegidas[idProtegido];
     });
+    if (typeof restaurarPosicaoBarril === "function") restaurarPosicaoBarril(idUnico);
+    if (typeof sincronizarVisuaisProtecaoBarril === "function") sincronizarVisuaisProtecaoBarril();
 
     if (tinhaEscudo && typeof quebrarVisualEscudo === "function") quebrarVisualEscudo(idUnico);
     if (typeof atualizarTodosUnidoes === "function") atualizarTodosUnidoes();
@@ -1199,6 +1367,71 @@ function silenciarCartaPeloEcto(idUnico) {
 }
 window.rpgSilenciarCartaPeloEcto = silenciarCartaPeloEcto;
 
+// 👻 ECTO — uma projeção pequena sai da carta, atravessa o alvo e leva embora
+// a runa da habilidade. O efeito é visual e não atrasa o dano nem a vez do bot.
+function animarToqueEcto(idEcto, idAlvo, removeuHabilidade) {
+    let pacoteEcto = document.getElementById("pacote-" + idEcto);
+    let pacoteAlvo = document.getElementById("pacote-" + idAlvo);
+    if (!pacoteEcto || !pacoteAlvo) return;
+
+    let origem = pacoteEcto.getBoundingClientRect();
+    let destino = pacoteAlvo.getBoundingClientRect();
+    let inicioX = origem.left + origem.width / 2;
+    let inicioY = origem.top + origem.height * .42;
+    let deslocamentoX = destino.left + destino.width / 2 - inicioX;
+    let deslocamentoY = destino.top + destino.height * .42 - inicioY;
+    let sentido = deslocamentoX < 0 ? -1 : 1;
+
+    let projecao = document.createElement("span");
+    projecao.className = "projecao-ecto-rpg";
+    projecao.setAttribute("aria-hidden", "true");
+    projecao.style.left = `${inicioX}px`;
+    projecao.style.top = `${inicioY}px`;
+    projecao.style.setProperty("--ecto-x", `${deslocamentoX + sentido * destino.width * .34}px`);
+    projecao.style.setProperty("--ecto-y", `${deslocamentoY}px`);
+    projecao.style.setProperty("--ecto-meio-x", `${deslocamentoX * .55}px`);
+    projecao.style.setProperty("--ecto-meio-y", `${deslocamentoY * .55 - 18}px`);
+    projecao.style.setProperty("--ecto-direcao", String(sentido));
+
+    let imagemOriginal = pacoteEcto.querySelector("img");
+    if (imagemOriginal?.src) {
+        let imagem = document.createElement("img");
+        imagem.src = imagemOriginal.src;
+        imagem.alt = "";
+        projecao.appendChild(imagem);
+    } else {
+        projecao.textContent = "👻";
+    }
+    for (let indice = 0; indice < 3; indice++) projecao.appendChild(document.createElement("i"));
+    document.body.appendChild(projecao);
+
+    pacoteEcto.classList.remove("ecto-projetando-rpg");
+    void pacoteEcto.offsetWidth;
+    pacoteEcto.classList.add("ecto-projetando-rpg");
+
+    setTimeout(() => {
+        if (!pacoteAlvo.isConnected) return;
+        pacoteAlvo.classList.remove("impacto-toque-ecto-rpg");
+        void pacoteAlvo.offsetWidth;
+        pacoteAlvo.classList.add("impacto-toque-ecto-rpg");
+
+        if (removeuHabilidade) {
+            let atributo = document.createElement("span");
+            atributo.className = "atributo-arrancado-ecto-rpg";
+            atributo.textContent = "✦";
+            atributo.setAttribute("aria-hidden", "true");
+            pacoteAlvo.appendChild(atributo);
+            setTimeout(() => atributo.remove(), 720);
+        }
+        setTimeout(() => pacoteAlvo?.isConnected && pacoteAlvo.classList.remove("impacto-toque-ecto-rpg"), 660);
+    }, 455);
+
+    setTimeout(() => {
+        projecao.remove();
+        pacoteEcto?.isConnected && pacoteEcto.classList.remove("ecto-projetando-rpg");
+    }, 960);
+}
+
 // O toque acontece antes de descontar a vida. Assim, se o golpe for letal,
 // Passivas de morte como as do Ork, Barril e Slime já estarão desativadas.
 function aplicarToqueEctoAntesDoDano(idAlvo) {
@@ -1209,6 +1442,7 @@ function aplicarToqueEctoAntesDoDano(idAlvo) {
 
     let resultado = silenciarCartaPeloEcto(idAlvo);
     if (!resultado) return false;
+    animarToqueEcto(idEcto, idAlvo, !resultado.jaEstavaSilenciada);
     pacoteAlvo.dataset.ectoUltimoAtacante = idEcto;
     narrar(resultado.jaEstavaSilenciada
         ? `👻 ${resultado.nome} já estava sem habilidade; o Ecto manteve o bloqueio permanente.`
@@ -1279,8 +1513,10 @@ function animarMetamorfoseCtrl(idCtrl, nomeCopiado, ehAliado) {
 
 function obterModoCartaAliada() {
     if (modoTraicao) return "executar-traicao";
-    if (modoLadrao && turnoAtivo === 1 && faseLadrao === 2) return "roubo-beneficio";
-    if (modoLadrao && turnoAtivo === 2 && faseLadrao === 1) return "roubo-prejuizo";
+    let acaoLadrao = typeof obterAcaoRouboLadraoNoLado === "function"
+        ? obterAcaoRouboLadraoNoLado("j1")
+        : null;
+    if (acaoLadrao) return acaoLadrao;
     if (modoAtaqueInimigo) return "ataque-inimigo";
     if (modoCura) return "cura";
     if (modoRouboGoblin) return "roubo-goblin";
@@ -1292,8 +1528,10 @@ function obterModoCartaAliada() {
 
 function obterModoCartaInimiga() {
     if (modoTraicao) return "executar-traicao";
-    if (modoLadrao && turnoAtivo === 1 && faseLadrao === 1) return "roubo-prejuizo";
-    if (modoLadrao && turnoAtivo === 2 && faseLadrao === 2) return "roubo-beneficio";
+    let acaoLadrao = typeof obterAcaoRouboLadraoNoLado === "function"
+        ? obterAcaoRouboLadraoNoLado("j2")
+        : null;
+    if (acaoLadrao) return acaoLadrao;
     if (modoCuraInimigo) return "cura-inimiga";
     if (modoRouboGoblin) return "roubo-goblin";
     if (suportePreparado !== null) return "suporte";
@@ -1396,9 +1634,11 @@ document.addEventListener("click", function (evento) {
 }, true);
 
 function iniciarJogo() {
+    limparHistoricoNarrador();
     deckJ1 = []; maoJ1 = [];
     deckJ2 = []; maoJ2 = [];
     especialFixoBumerskeleton = {};
+    recargaGeloBumerskeleton = {};
     especialFixoSeparado = {};
     parceriaSeparado = {};
     separadaoDividido = {};
@@ -1481,7 +1721,7 @@ function iniciarJogo() {
     aberturaEscolhaJ1 = null;
     aberturaEscolhaJ2 = null;
     document.getElementById("texto-turno").innerText = "Fase de Abertura";
-    document.getElementById("painel-narrador").innerText = "⚔️ Escolha 1 TROPA da sua mão pra abrir o jogo. As duas cartas serão reveladas juntas!";
+    narrar("⚔️ Escolha 1 TROPA da sua mão pra abrir o jogo. As duas cartas serão reveladas juntas!");
     let btnDado = document.getElementById("btn-rolar-dado");
     if (btnDado) btnDado.style.display = "none";
 
@@ -1560,7 +1800,7 @@ function rolarDado() {
             dadoTela.innerText = `🎲 ${dadoJ1} x ${dadoJ2}`;
             textoTurno.innerText = "Sua Vez!";
             textoTurno.style.color = "#2ecc71"; 
-            painelNarrador.innerText = "Você tirou um número maior e começa jogando!";
+            narrar("Você tirou um número maior e começa jogando!");
             turnoAtivo = 1; 
             jogoIniciado = true; 
         } 
@@ -1568,7 +1808,7 @@ function rolarDado() {
             dadoTela.innerText = `🎲 ${dadoJ1} x ${dadoJ2}`;
             textoTurno.innerText = "Vez do Oponente!";
             textoTurno.style.color = "#e74c3c"; 
-            painelNarrador.innerText = "O oponente tirou um número maior e começa!";
+            narrar("O oponente tirou um número maior e começa!");
             turnoAtivo = 2; 
             jogoIniciado = true; 
         }
@@ -1576,12 +1816,12 @@ function rolarDado() {
             // 🎲 EMPATE — sem isso, o jogo ficava travado esperando alguém rolar de novo
             // sem nenhum aviso na tela.
             dadoTela.innerText = `🎲 ${dadoJ1} x ${dadoJ2}`;
-            painelNarrador.innerText = "Empate! Role o dado de novo pra decidir quem começa.";
+            narrar("Empate! Role o dado de novo pra decidir quem começa.");
         }
     } else {
         let resultado = Math.floor(Math.random() * 6) + 1;
         dadoTela.innerText = "🎲 " + resultado;
-        painelNarrador.innerText = `O dado rolou um ${resultado}.`;
+        narrar(`O dado rolou um ${resultado}.`);
     }
 }
 
@@ -1652,7 +1892,9 @@ function passarTurno() {
     if (ultimoIdQueAtacou && pocaoVeluxAtiva[ultimoIdQueAtacou] === true) {
         pocaoVeluxAtiva[ultimoIdQueAtacou] = false; 
         ativarEfeitoVelocidade(ultimoIdQueAtacou);
-        narrar("⚡ EFEITO VELUX: Na velocidade da luz! A carta que acabou de atacar tem direito a MAIS UM ATAQUE agora!");
+        narrar(barrilJaImpactou[ultimoIdQueAtacou]
+            ? "⚡ EFEITO VELUX: Escolha outra carta inimiga para os goblins do Barril migrarem. O Barril não será lançado de novo."
+            : "⚡ EFEITO VELUX: Na velocidade da luz! A carta que acabou de atacar tem direito a MAIS UM ATAQUE agora!");
         return; 
     }
 
@@ -1664,7 +1906,7 @@ function passarTurno() {
     
     goblinAtaquesGanhos = {};
     ultimoIdQueAtacou = null;
-    ladraoUsosPorLado = { j1: 0, j2: 0 }; // 🩹 NOVO: libera 1 uso da passiva do Ladrão por turno, por lado
+    ladraoUsosPorCarta = {}; // libera separadamente a tentativa de cada Ladrão no próximo turno
     
     // Inverte o turno de 1 para 2 ou de 2 para 1
     turnoAtivo = (turnoAtivo === 1) ? 2 : 1;
@@ -1957,13 +2199,7 @@ function invocarToken(idBaseCarta, idCampo) {
         let idDoPacote = "pacote-" + idUnico;
         let idSemPacote = idUnico;
         
-        if (modoLadrao === true && turnoAtivo === 1 && faseLadrao === 1 && !ehAliado) aplicarRouboPrejuizo(idDoPacote);
-        else if (modoLadrao === true && turnoAtivo === 1 && faseLadrao === 2 && ehAliado) aplicarRouboBeneficio(idDoPacote);
-        else if (modoLadrao === true && turnoAtivo === 2 && faseLadrao === 1 && ehAliado) aplicarRouboPrejuizo(idDoPacote);
-        else if (modoLadrao === true && turnoAtivo === 2 && faseLadrao === 2 && !ehAliado) aplicarRouboBeneficio(idDoPacote);
-        // 🩹 CORREÇÃO: faltava aqui também (token invocado) — clicar no lado/fase errada
-        // durante o roubo do Ladrão vazava pra ataque/etc. em vez de avisar.
-        else if (modoLadrao === true) narrar("❌ Alvo inválido para o Ladrão! Clique na carta certa pra continuar o roubo.");
+        if (modoLadrao === true) resolverCliqueRouboLadrao(idDoPacote);
         else if (modoAlvoBarril === true && !ehAliado) aplicarAlvoBarril(idDoPacote);
         else if ((modoAlvoBarrilBarbaro === true || modoAlvoBarrilBarbaroInimigo === true)) aplicarAlvoBarrilBarbaro(idDoPacote);
         else if (typeof modoEspecialBarrilGoblin !== 'undefined' && modoEspecialBarrilGoblin === true) aplicarAlvoBarril(idDoPacote, true);
@@ -1972,6 +2208,8 @@ function invocarToken(idBaseCarta, idCampo) {
         else if (modoCuraInimigo === true && !ehAliado) aplicarCuraInimiga(idDoPacote);
         else if (modoAtaqueInimigo === true && ehAliado) aplicarDanoInimigo(idDoPacote);
         else if (modoRouboGoblin === true) aplicarRouboDanoGoblin(idDoPacote);
+        // Goblins nascidos do Ork também podem ser escolhidos como parceiros.
+        else if (modoParceriaSeparado === true) aplicarParceriaSeparado(idDoPacote);
         // ⚔️ CAVALEIRO DAS TREVAS — tokens invocados também podem ser alvos da área.
         else if (modoAlvoCavaleiro === true && !ehAliado) aplicarAlvoCavaleiro(idDoPacote);
         else if (modoAlvoCavaleiroInimigo === true && ehAliado) aplicarAlvoCavaleiroInimigo(idDoPacote);
@@ -2002,24 +2240,14 @@ function invocarToken(idBaseCarta, idCampo) {
             return;
         }
         else if (modoProtecaoBarril === true) {
-            if (idSemPacote === idBarrilProtetor) {
-                narrar("❌ O Barril não pode proteger a si mesmo! Escolha outra carta.");
-            } else {
-                cartasProtegidas[idSemPacote] = idBarrilProtetor;
-                ativarVisualProtecaoBarril(idSemPacote, idBarrilProtetor);
-                narrar(`🛡️ Vínculo criado! O Barril agora dará a vida para proteger esta carta!`);
+            if (vincularProtecaoBarril(idSemPacote, idBarrilProtetor)) {
+                modoProtecaoBarril = false; idBarrilProtetor = null;
             }
-            modoProtecaoBarril = false; idBarrilProtetor = null;
         }
         else if (modoProtecaoBarrilInimigo === true) {
-            if (idSemPacoteLocal === idBarrilProtetor) {
-                narrar("❌ O Barril não pode proteger a si mesmo! Escolha outra carta.");
-            } else {
-                cartasProtegidas[idSemPacoteLocal] = idBarrilProtetor;
-                ativarVisualProtecaoBarril(idSemPacoteLocal, idBarrilProtetor);
-                narrar(`🛡️ Vínculo criado! O Barril inimigo agora protegerá esta carta!`);
+            if (vincularProtecaoBarril(idSemPacote, idBarrilProtetor)) {
+                modoProtecaoBarrilInimigo = false; idBarrilProtetor = null;
             }
-            modoProtecaoBarrilInimigo = false; idBarrilProtetor = null;
         }
         else if (suportePreparado !== null) {
             if (ehAliado && !idItemNaMao.includes("inimigo")) equiparSuporte(idSemPacote);
@@ -2080,33 +2308,21 @@ function invocarTokenPeloNomeSemHabilidade(nomeCarta, idCampo) {
 
             // 🛡️ ADICIONADO: Interceção para criar vínculo no Token Aliado
             if (typeof modoProtecaoBarril !== 'undefined' && modoProtecaoBarril && ehAliado) {
-                let protegerASiMesmo = (idSemPacote === idBarrilProtetor);
-                if (!protegerASiMesmo) {
-                    cartasProtegidas[idSemPacote] = idBarrilProtetor;
-                    ativarVisualProtecaoBarril(idSemPacote, idBarrilProtetor);
+                if (vincularProtecaoBarril(idSemPacote, idBarrilProtetor)) {
+                    modoProtecaoBarril = false; idBarrilProtetor = null;
                 }
-                modoProtecaoBarril = false; idBarrilProtetor = null;
-                return narrar(protegerASiMesmo ? "❌ O Barril não pode proteger a si mesmo! Escolha outra carta." : `🛡️ Vínculo criado! O Barril agora dará a vida para proteger este token!`);
+                return;
             }
             // 🛡️ ADICIONADO: Interceção para criar vínculo no Token Inimigo
             else if (typeof modoProtecaoBarrilInimigo !== 'undefined' && modoProtecaoBarrilInimigo && !ehAliado) {
-                let protegerASiMesmo = (idSemPacote === idBarrilProtetor);
-                if (!protegerASiMesmo) {
-                    cartasProtegidas[idSemPacote] = idBarrilProtetor;
-                    ativarVisualProtecaoBarril(idSemPacote, idBarrilProtetor);
+                if (vincularProtecaoBarril(idSemPacote, idBarrilProtetor)) {
+                    modoProtecaoBarrilInimigo = false; idBarrilProtetor = null;
                 }
-                modoProtecaoBarrilInimigo = false; idBarrilProtetor = null;
-                return narrar(protegerASiMesmo ? "❌ O Barril não pode proteger a si mesmo! Escolha outra carta." : `🛡️ Vínculo criado! O Barril inimigo agora protegerá este token!`);
+                return;
             }
             else if (typeof modoTraicao !== 'undefined' && modoTraicao) { executarTraicao(idDoPacote); return; }
-            // 💰 LADRÃO — faltava nos tokens (mesma lógica dos dois lados normais)
-            else if (typeof modoLadrao !== 'undefined' && modoLadrao === true && ehAliado && turnoAtivo === 1 && faseLadrao === 2) aplicarRouboBeneficio(idDoPacote);
-            else if (typeof modoLadrao !== 'undefined' && modoLadrao === true && ehAliado && turnoAtivo === 2 && faseLadrao === 1) aplicarRouboPrejuizo(idDoPacote);
-            else if (typeof modoLadrao !== 'undefined' && modoLadrao === true && !ehAliado && turnoAtivo === 1 && faseLadrao === 1) aplicarRouboPrejuizo(idDoPacote);
-            else if (typeof modoLadrao !== 'undefined' && modoLadrao === true && !ehAliado && turnoAtivo === 2 && faseLadrao === 2) aplicarRouboBeneficio(idDoPacote);
-            // 🩹 CORREÇÃO: mesma trava dos outros três lugares — clicar no alvo errado durante
-            // o roubo do Ladrão vazava pra outra ação em vez de avisar.
-            else if (typeof modoLadrao !== 'undefined' && modoLadrao === true) narrar("❌ Alvo inválido para o Ladrão! Clique na carta certa pra continuar o roubo.");
+            // 💰 LADRÃO — o lado correto vem da posição do Ladrão ativo, não do turno.
+            else if (typeof modoLadrao !== 'undefined' && modoLadrao === true) resolverCliqueRouboLadrao(idDoPacote);
             else if (typeof modoAtaqueInimigo !== 'undefined' && modoAtaqueInimigo && ehAliado) aplicarDanoInimigo(idDoPacote);
             else if (typeof modoCura !== 'undefined' && modoCura && ehAliado) aplicarCuraAliada(idDoPacote);
             else if (typeof modoCuraInimigo !== 'undefined' && modoCuraInimigo && !ehAliado) aplicarCuraInimiga(idDoPacote);
@@ -2120,8 +2336,8 @@ function invocarTokenPeloNomeSemHabilidade(nomeCarta, idCampo) {
             else if (typeof modoAlvoCavaleiro !== 'undefined' && modoAlvoCavaleiro === true && !ehAliado) aplicarAlvoCavaleiro(idDoPacote);
             else if (typeof modoAlvoCavaleiroInimigo !== 'undefined' && modoAlvoCavaleiroInimigo === true && ehAliado) aplicarAlvoCavaleiroInimigo(idDoPacote);
             // 🎨 ÍCARO / ⚖️ THIAGO / 👥 SEPARADO / ⏳ VIAJANTE DO TEMPO — faltavam nos tokens
-            else if (typeof modoTransformacaoIcaro !== 'undefined' && modoTransformacaoIcaro === true) aplicarTransformacaoIcaro(idDoPacote);
-            else if (typeof modoAjusteThiago !== 'undefined' && modoAjusteThiago === true) aplicarAjusteThiago(idDoPacote);
+            else if (typeof modoTransformacaoIcaro !== 'undefined' && modoTransformacaoIcaro === true && cliquePodeResolverAcaoPendente(idIcaroAtivo)) aplicarTransformacaoIcaro(idDoPacote);
+            else if (typeof modoAjusteThiago !== 'undefined' && modoAjusteThiago === true && cliquePodeResolverAcaoPendente(idThiagoAtivo)) aplicarAjusteThiago(idDoPacote);
             else if (typeof modoParceriaSeparado !== 'undefined' && modoParceriaSeparado === true) aplicarParceriaSeparado(idDoPacote);
             else if (typeof modoPrenderNoTempo !== 'undefined' && modoPrenderNoTempo === true) aplicarPrenderNoTempo(idDoPacote);
             else if (typeof suportePreparado !== 'undefined' && suportePreparado !== null) equiparSuporte(idSemPacote);
@@ -2259,7 +2475,7 @@ function limparEstadosDaVitimaZumbi(idUnico) {
     [bonusUnidao, goblinJaAtacouNesteTurno, goblinAtaquesGanhos, viajantesJaUsaram,
         bloqueioNecro, pocaoVeluxAtiva, escudoGuerreiro, barrilJaImpactou,
         splashBarbaroAtivo, duracaoGelo, geloBumerskeletonAtivos,
-        especialFixoBumerskeleton, especialFixoSeparado, bonusVampi7Sozinho,
+        especialFixoBumerskeleton, recargaGeloBumerskeleton, especialFixoSeparado, bonusVampi7Sozinho,
         cartasCongeladas, cavalosDeTroiaAtivos, incendiarioCiclo,
         incendiarioFasesVisuais, separadaoDividido, separadaoAtacantesNaSequencia,
         portableDuracao, buffsAllsforms, unidadesVivasTrios, ctrlV
@@ -2663,15 +2879,10 @@ imagem.onclick = function() {
         }
     // 🛡️ 1º PRIORIDADE: VÍNCULO DO BARRIL ALIADO
         if (typeof modoProtecaoBarril !== 'undefined' && modoProtecaoBarril === true) {
-            if (idSemPacote === idBarrilProtetor) {
-                narrar("❌ O Barril não pode proteger a si mesmo! Escolha outra carta.");
-            } else {
-                cartasProtegidas[idSemPacote] = idBarrilProtetor; // idSemPacote já está sem o "pacote-"
-                ativarVisualProtecaoBarril(idSemPacote, idBarrilProtetor);
-                narrar("🛡️ Vínculo criado! O Barril agora dará a vida para proteger esta carta!");
+            if (vincularProtecaoBarril(idSemPacote, idBarrilProtetor)) {
+                modoProtecaoBarril = false;
+                idBarrilProtetor = null;
             }
-            modoProtecaoBarril = false; 
-            idBarrilProtetor = null;
             return;
         }
             // ❄️ POÇÃO DE GELO (ALVO SIMPLES - SEU LADO CLICANDO)
@@ -2699,12 +2910,7 @@ imagem.onclick = function() {
             return;
         }
         else if (modoTraicao === true) executarTraicao(idDoPacote);
-        else if (modoLadrao === true && turnoAtivo === 1 && faseLadrao === 2) aplicarRouboBeneficio(idDoPacote);
-        else if (modoLadrao === true && turnoAtivo === 2 && faseLadrao === 1) aplicarRouboPrejuizo(idDoPacote);
-        // 🩹 CORREÇÃO: clicar no lado/fase errada durante o roubo do Ladrão "vazava" pra ação
-        // padrão (ex: atacar) em vez de avisar — o roubo continuava ativo escondido, e várias
-        // vezes seguidas parecia que a passiva tinha "travado". Agora só avisa e mantém o roubo.
-        else if (modoLadrao === true) narrar("❌ Alvo inválido para o Ladrão! Clique na carta certa pra continuar o roubo.");
+        else if (modoLadrao === true) resolverCliqueRouboLadrao(idDoPacote);
         else if (modoAtaqueInimigo === true) aplicarDanoInimigo(idDoPacote);
         else if (modoAlvoBarrilBarbaro === true || modoAlvoBarrilBarbaroInimigo === true) aplicarAlvoBarrilBarbaro(idDoPacote);
         else if (modoCura === true) aplicarCuraAliada(idDoPacote);
@@ -2713,8 +2919,8 @@ imagem.onclick = function() {
         else if (typeof modoEspecialBarrilGoblin !== 'undefined' && modoEspecialBarrilGoblin === true) aplicarAlvoBarril(idDoPacote, true);
         else if (typeof modoEspecialBumerskeleton !== 'undefined' && modoEspecialBumerskeleton === true) aplicarEspecialBumerskeletonAntesDeAtacar(idDoPacote);
         else if (modoAlvoCavaleiroInimigo === true) aplicarAlvoCavaleiroInimigo(idDoPacote);
-        else if (modoTransformacaoIcaro === true) aplicarTransformacaoIcaro(idDoPacote);
-        else if (modoAjusteThiago === true) aplicarAjusteThiago(idDoPacote);
+        else if (modoTransformacaoIcaro === true && cliquePodeResolverAcaoPendente(idIcaroAtivo)) aplicarTransformacaoIcaro(idDoPacote);
+        else if (modoAjusteThiago === true && cliquePodeResolverAcaoPendente(idThiagoAtivo)) aplicarAjusteThiago(idDoPacote);
         else if (modoParceriaSeparado === true) aplicarParceriaSeparado(idDoPacote);
         else if (modoPrenderNoTempo === true) aplicarPrenderNoTempo(idDoPacote);
         else if (suportePreparado !== null) { 
@@ -2844,11 +3050,7 @@ function jogarCartaInimigo(idDoPacote, somentePrepararCampo = false) {
             return;
         }
         if (modoTraicao === true) { executarTraicao(idDoPacote); return; }
-        else if (modoLadrao === true && turnoAtivo === 1 && faseLadrao === 1) aplicarRouboPrejuizo(idDoPacote);
-        else if (modoLadrao === true && turnoAtivo === 2 && faseLadrao === 2) aplicarRouboBeneficio(idDoPacote);
-        // 🩹 CORREÇÃO: mesmo problema do outro lado — clicar no alvo errado durante o roubo
-        // vazava pra outra ação em vez de avisar, deixando o roubo pendurado escondido.
-        else if (modoLadrao === true) narrar("❌ Alvo inválido para o Ladrão! Clique na carta certa pra continuar o roubo.");
+        else if (modoLadrao === true) resolverCliqueRouboLadrao(idDoPacote);
         else if (modoCuraInimigo === true) aplicarCuraInimiga(idDoPacote);
         else if (modoAlvoBarrilBarbaro === true || modoAlvoBarrilBarbaroInimigo === true) aplicarAlvoBarrilBarbaro(idDoPacote);
         else if (modoRouboGoblin === true) aplicarRouboDanoGoblin(idDoPacote); 
@@ -2856,8 +3058,8 @@ function jogarCartaInimigo(idDoPacote, somentePrepararCampo = false) {
         else if (typeof modoEspecialBarrilGoblin !== 'undefined' && modoEspecialBarrilGoblin === true) aplicarAlvoBarril(idDoPacote, true);
         else if (typeof modoEspecialBumerskeleton !== 'undefined' && modoEspecialBumerskeleton === true) aplicarEspecialBumerskeletonAntesDeAtacar(idDoPacote);
         else if (modoAlvoCavaleiro === true) aplicarAlvoCavaleiro(idDoPacote);
-        else if (modoTransformacaoIcaro === true) aplicarTransformacaoIcaro(idDoPacote);
-        else if (modoAjusteThiago === true) aplicarAjusteThiago(idDoPacote);
+        else if (modoTransformacaoIcaro === true && cliquePodeResolverAcaoPendente(idIcaroAtivo)) aplicarTransformacaoIcaro(idDoPacote);
+        else if (modoAjusteThiago === true && cliquePodeResolverAcaoPendente(idThiagoAtivo)) aplicarAjusteThiago(idDoPacote);
         else if (modoParceriaSeparado === true) aplicarParceriaSeparado(idDoPacote);
         else if (modoPrenderNoTempo === true) aplicarPrenderNoTempo(idDoPacote);
         // 🧪 BRUXO (TRANSFORMAR 4)
@@ -2902,14 +3104,11 @@ function jogarCartaInimigo(idDoPacote, somentePrepararCampo = false) {
             return;
         }
         else if (typeof modoProtecaoBarrilInimigo !== 'undefined' && modoProtecaoBarrilInimigo === true) {
-        let protegerASiMesmo = (idSemPacote === idBarrilProtetor);
-        if (!protegerASiMesmo) {
-            cartasProtegidas[idSemPacote] = idBarrilProtetor;
-            ativarVisualProtecaoBarril(idSemPacote, idBarrilProtetor);
+        if (vincularProtecaoBarril(idSemPacote, idBarrilProtetor)) {
+            modoProtecaoBarrilInimigo = false;
+            idBarrilProtetor = null;
         }
-        modoProtecaoBarrilInimigo = false; 
-        idBarrilProtetor = null;
-        return narrar(protegerASiMesmo ? "❌ O Barril não pode proteger a si mesmo! Escolha outra carta." : `🛡️ Vínculo criado! O Barril inimigo agora protegerá esta carta!`);
+        return;
     } 
         else if (suportePreparado !== null) {
             equiparSuporte(idSemPacoteLocal);
@@ -2934,6 +3133,9 @@ function criarHTMLCarta(carta, funcaoJogar, classeCss, ehAliado) {
     // transformação com um valor antigo inválido, nunca renderiza vida abaixo de zero.
     let vidaNumericaSegura = Number(carta.vida);
     let vidaExibida = Number.isFinite(vidaNumericaSegura) ? Math.max(0, vidaNumericaSegura) : 0;
+    let imagemDaCarta = typeof window.caminhoImagemRpg === "function"
+        ? window.caminhoImagemRpg(carta.img)
+        : carta.img;
     // 🩹 CORREÇÃO: os dois botões apareciam em QUALQUER Curandeiro, dos dois lados — deixando
     // curar o time errado sem querer. Agora só aparece o botão do lado certo da carta.
     let btnCura = (carta.nome === 'Curandeiro' && ehAliado) ? `<button onclick="iniciarCura('${carta.idUnico}')" style="background-color: green; color: white; width: 100%; margin-bottom: 2px; cursor: pointer;">Curar 💚</button>` : '';
@@ -2976,7 +3178,7 @@ function criarHTMLCarta(carta, funcaoJogar, classeCss, ehAliado) {
     return `
         <div id="pacote-${carta.idUnico}" class="${classeCss}">
             <span class="nome-carta">${carta.nome}</span>
-            <img src="${carta.img}" alt="${carta.nome}" onclick="${funcaoJogar}('pacote-${carta.idUnico}')">
+            <img src="${imagemDaCarta}" alt="${carta.nome}" onclick="${funcaoJogar}('pacote-${carta.idUnico}')">
             
             <div class="status-container">
                 <span class="status-vida">❤️ <span id="vida-${carta.idUnico}">${vidaExibida}</span></span>
@@ -3075,6 +3277,16 @@ function iniciarAtaque(nomeCarta, idUnico) {
     danoPreparado = danoBase;
     ultimoIdQueAtacou = idUnico;
 
+    // Depois de conquistar Fogo ou Gelo, todo ataque normal do Bumerskeleton
+    // passa pelo mesmo lançamento do Especial. Não exige novo clique no botão roxo.
+    if (nomeCarta === "Bumerskeleton" && especialFixoBumerskeleton[idUnico]) {
+        modoAtaque = false;
+        modoAtaqueInimigo = false;
+        modoEspecialBumerskeleton = true;
+        idBumerskeletonEspecialAtivo = idUnico;
+        return narrar(`🪃 Especial fixo de ${especialFixoBumerskeleton[idUnico] === 3 ? "FOGO" : "GELO"} ativo! Escolha o alvo do bumerangue.`);
+    }
+
     // 🪵 BARRIL DE BÁRBAROS (Preparar Impacto)
     if (nomeCarta === 'Barril de Bárbaro') {
         modoAlvoBarrilBarbaro = true;
@@ -3152,7 +3364,9 @@ function iniciarAtaque(nomeCarta, idUnico) {
     }
     
     modoAtaque = true; 
-    narrar(`Você preparou um ataque de ${danoPreparado} de dano! Clique no inimigo que deseja acertar.`);
+    let danoConjunto = danoPreparado + obterSeparadosQueAcompanhamAtaque(idUnico, "j1")
+        .reduce((total, parceiro) => total + parceiro.dano, 0);
+    narrar(`Você preparou um ataque de ${danoConjunto} de dano! Clique no inimigo que deseja acertar.`);
 }
 
 function receberAtaque(idVidaAlvo, idPacoteAlvo) {
@@ -3175,10 +3389,19 @@ function receberAtaque(idVidaAlvo, idPacoteAlvo) {
             }
         }
 
+        // 👻 O Ecto toca o alvo antes de qualquer defesa. Além de apagar a
+        // habilidade do Barril atingido, ele atravessa a proteção de outro Barril,
+        // assim como já atravessa os escudos azul e de suporte.
+        let ectoIgnoraProtecao = atacanteAtualEh("Ecto");
+        if (ectoIgnoraProtecao) aplicarToqueEctoAntesDoDano(idPuro);
+
         // 🛡️ VERIFICAÇÃO DO BARRIL GUARDA-COSTAS (Alvo Único)
         let idDoBarrilQueProtege = cartasProtegidas[idPuro];
-        if (idDoBarrilQueProtege === idPuro) delete cartasProtegidas[idPuro]; // 🩹 segurança: desfaz qualquer auto-proteção travada
-        let atacanteIgnoraEscudo = (ultimaCartaJogador && ultimaCartaJogador.nome === "Cavaleiro das Trevas");
+        if (idDoBarrilQueProtege && String(idDoBarrilQueProtege) === String(idPuro)) {
+            delete cartasProtegidas[idPuro]; // 🩹 segurança: desfaz qualquer auto-proteção travada
+            idDoBarrilQueProtege = null;
+        }
+        let atacanteIgnoraEscudo = atacanteAtualEh("Cavaleiro das Trevas") || ectoIgnoraProtecao;
 
         if (idDoBarrilQueProtege && !atacanteIgnoraEscudo) {
             let barrilAindaExiste = document.getElementById("pacote-" + idDoBarrilQueProtege);
@@ -3189,13 +3412,17 @@ function receberAtaque(idVidaAlvo, idPacoteAlvo) {
             }
         }
 
+        let parceirosSeparado = obterSeparadosQueAcompanhamAtaque(ultimoIdQueAtacou, "j1");
+        let danoGolpeConjunto = danoPreparado
+            + parceirosSeparado.reduce((total, parceiro) => total + parceiro.dano, 0);
+
         // 👻 O Ecto apaga primeiro a habilidade e qualquer escudo aplicado à
         // carta. Por isso seu golpe atravessa tanto o escudo do Guerreiro
         // quanto o concedido pelo suporte Escudo.
-        aplicarToqueEctoAntesDoDano(idPuro);
+        if (!ectoIgnoraProtecao) aplicarToqueEctoAntesDoDano(idPuro);
 
         // 🛡️ BLOQUEIO DO GUERREIRO
-        if (escudoGuerreiro[idPuro] && Number(danoPreparado) > 0) {
+        if (escudoGuerreiro[idPuro] && danoGolpeConjunto > 0) {
             narrar(`🛡️ BLANG! O escudo da carta inimiga bloqueou o ataque e QUEBROU!`);
             delete escudoGuerreiro[idPuro];
             quebrarVisualEscudo(idPuro);
@@ -3209,19 +3436,21 @@ function receberAtaque(idVidaAlvo, idPacoteAlvo) {
         if (idSeparadoDivididoAntesDoGolpe) {
             animarAtaqueDivididoSeparado(idSeparadoDivididoAntesDoGolpe, ultimoIdQueAtacou, idPacoteAlvo);
         }
+        parceirosSeparado.forEach(parceiro =>
+            animarAtaqueConjuntoSeparado(parceiro.id, parceiro.idParceiro || ultimoIdQueAtacou, idPacoteAlvo));
 
         let textoVida = document.getElementById(idVidaAlvo);
         // 🩹 CORREÇÃO: era parseInt, que truncava vida fracionária (ex: 0.75 virava 0) — o jogo
         // tem cartas com valores quebrados (Barril de Goblin, fogo do Bumerskeleton -0.25...),
         // e isso fazia o cálculo do dano sair errado ao atacar essas cartas.
         // 🩹 CORREÇÃO: nunca deixa a vida mostrar número negativo — trava em 0.
-        let vidaAtual = Math.max(0, parseFloat(textoVida.innerText) - danoPreparado);
+        let vidaAtual = Math.max(0, parseFloat(textoVida.innerText) - danoGolpeConjunto);
         let vidaAntesDoGolpe = parseFloat(textoVida.innerText);
         textoVida.innerText = vidaAtual;
         sincronizarDanoDoTrio(idPuro, vidaAntesDoGolpe, vidaAtual);
         
         try {
-            if (ultimaCartaJogador && ultimaCartaJogador.nome === "Bumerskeleton") {
+            if (atacanteAtualEh("Bumerskeleton")) {
                 if (typeof executarChainBumerangue === "function") {
                     executarChainBumerangue(ultimoIdQueAtacou, idPuro, "campo-j2");
                 } else {
@@ -3252,26 +3481,11 @@ function receberAtaque(idVidaAlvo, idPacoteAlvo) {
                 "O Barril inimigo quebrou!"
             );
         } else {
-            narrar("Pow! O alvo tomou " + danoPreparado + " de dano!");
+            narrar("Pow! O alvo tomou " + danoGolpeConjunto + " de dano!");
         }
-        
-        // 👥 SEPARADO/SEPARADOIS — se a carta que atacou for a PARCEIRA de um Separado, o
-        // Separado é arrastado junto e também acerta o MESMO alvo (é o ataque da parceira
-        // que "puxa" o Separado — o Separado sozinho não ataca pelo próprio botão).
-        // Não arrasta durante a habilidade do dado 6 (ataque dividido), onde cada uma ataca
-        // um alvo diferente por conta própria.
-        let idSeparadoAtivoDividido = obterSeparadaoDivididoAtivo(ultimoIdQueAtacou);
-        let idSeparadoPuxado = idSeparadoAtivoDividido ? null : encontrarSeparadoParceiroDe(ultimoIdQueAtacou);
-        if (idSeparadoPuxado) {
-            let pacoteSeparado = document.getElementById("pacote-" + idSeparadoPuxado);
-            let pacoteAlvoAindaExiste = document.getElementById(idPacoteAlvo);
-            if (pacoteSeparado && pacoteAlvoAindaExiste) {
-                let danoSeparado = parseFloat(document.getElementById("dano-" + idSeparadoPuxado).innerText) || 0;
-                let nomeSeparado = pacoteSeparado.querySelector(".nome-carta").innerText.trim();
-                narrar(`👥 ${nomeSeparado} atacou junto com a parceira, causando ${danoSeparado} de dano no mesmo alvo!`);
-                animarAtaqueConjuntoSeparado(idSeparadoPuxado, ultimoIdQueAtacou, idPacoteAlvo);
-                aplicarDanoAtaqueArea(idPacoteAlvo, danoSeparado, false);
-            }
+        if (parceirosSeparado.length > 0) {
+            let bonus = danoGolpeConjunto - danoPreparado;
+            narrar(`👥 A parceria somou ${bonus} de dano ao golpe (${danoGolpeConjunto} no total)!`);
         }
 
         // 🦇 VAMPI7 — ataca junto de qualquer carta do mesmo time que atacar.
@@ -3371,6 +3585,14 @@ function inimigoAtacar(idUnico) {
     danoInimigoPreparado = danoLido;
     ultimoIdQueAtacou = idUnico;
 
+    if (nomeCartaInimiga === "Bumerskeleton" && especialFixoBumerskeleton[idUnico]) {
+        modoAtaque = false;
+        modoAtaqueInimigo = false;
+        modoEspecialBumerskeleton = true;
+        idBumerskeletonEspecialAtivo = idUnico;
+        return narrar(`🪃 O Bumerskeleton do oponente atacará com ${especialFixoBumerskeleton[idUnico] === 3 ? "FOGO" : "GELO"} fixo. Escolha o alvo.`);
+    }
+
     // 🪵 BARRIL DE BÁRBAROS (Ataque de Impacto do Oponente)
     if (nomeCartaInimiga.includes('Barril de Bárbaro')) {
         modoAlvoBarrilBarbaroInimigo = true;
@@ -3449,7 +3671,11 @@ function inimigoAtacar(idUnico) {
     
     modoAtaqueInimigo = true; 
     if (aliadosNoCampo.length === 1) aplicarDanoInimigo(aliadosNoCampo[0].id);
-    else narrar(`O Oponente preparou um ataque de ${danoInimigoPreparado} de dano! Clique na SUA carta que vai receber o ataque.`);
+    else {
+        let danoConjunto = danoInimigoPreparado + obterSeparadosQueAcompanhamAtaque(idUnico, "j2")
+            .reduce((total, parceiro) => total + parceiro.dano, 0);
+        narrar(`O Oponente preparou um ataque de ${danoConjunto} de dano! Clique na SUA carta que vai receber o ataque.`);
+    }
 }
 
 function aplicarDanoInimigo(idPacoteAlvo) {
@@ -3471,10 +3697,18 @@ function aplicarDanoInimigo(idPacoteAlvo) {
         }
     }
 
+    // 👻 Mesma ordem no ataque inimigo: o Ecto apaga a habilidade antes da
+    // defesa e atravessa a proteção de um segundo Barril.
+    let ectoIgnoraProtecao = atacanteAtualEh("Ecto");
+    if (ectoIgnoraProtecao) aplicarToqueEctoAntesDoDano(idPuro);
+
     // 🛡️ VERIFICAÇÃO DO BARRIL GUARDA-COSTAS
     let idDoBarrilQueProtege = cartasProtegidas[idPuro];
-        if (idDoBarrilQueProtege === idPuro) delete cartasProtegidas[idPuro]; // 🩹 segurança: desfaz qualquer auto-proteção travada
-    let atacanteIgnoraEscudo = (ultimaCartaOponente && ultimaCartaOponente.nome === "Cavaleiro das Trevas");
+    if (idDoBarrilQueProtege && String(idDoBarrilQueProtege) === String(idPuro)) {
+        delete cartasProtegidas[idPuro]; // 🩹 segurança: desfaz qualquer auto-proteção travada
+        idDoBarrilQueProtege = null;
+    }
+    let atacanteIgnoraEscudo = atacanteAtualEh("Cavaleiro das Trevas") || ectoIgnoraProtecao;
 
     if (idDoBarrilQueProtege && !atacanteIgnoraEscudo) {
         let barrilAindaExiste = document.getElementById("pacote-" + idDoBarrilQueProtege);
@@ -3485,12 +3719,16 @@ function aplicarDanoInimigo(idPacoteAlvo) {
         }
     }
 
+    let parceirosSeparado = obterSeparadosQueAcompanhamAtaque(ultimoIdQueAtacou, "j2");
+    let danoGolpeConjunto = danoInimigoPreparado
+        + parceirosSeparado.reduce((total, parceiro) => total + parceiro.dano, 0);
+
     // 👻 Mesma regra no ataque do oponente: o toque do Ecto remove o escudo
     // antes do cálculo, então o dano não é bloqueado.
-    aplicarToqueEctoAntesDoDano(idPuro);
+    if (!ectoIgnoraProtecao) aplicarToqueEctoAntesDoDano(idPuro);
 
     // 🛡️ BLOQUEIO DO GUERREIRO
-    if (escudoGuerreiro[idPuro] && Number(danoInimigoPreparado) > 0) {
+    if (escudoGuerreiro[idPuro] && danoGolpeConjunto > 0) {
         narrar(`🛡️ BLANG! Sua carta defendeu o ataque inimigo, mas o escudo QUEBROU!`);
         delete escudoGuerreiro[idPuro];
         quebrarVisualEscudo(idPuro);
@@ -3504,18 +3742,20 @@ function aplicarDanoInimigo(idPacoteAlvo) {
     if (idSeparadoDivididoAntesDoGolpeInimigo) {
         animarAtaqueDivididoSeparado(idSeparadoDivididoAntesDoGolpeInimigo, ultimoIdQueAtacou, idPacoteAlvo);
     }
+    parceirosSeparado.forEach(parceiro =>
+        animarAtaqueConjuntoSeparado(parceiro.id, parceiro.idParceiro || ultimoIdQueAtacou, idPacoteAlvo));
 
     let idVida = idPacoteAlvo.replace("pacote-", "vida-");
     let textoVida = document.getElementById(idVida);
     // 🩹 CORREÇÃO: nunca deixa a vida mostrar número negativo — trava em 0.
-    let vidaAtual = Math.max(0, parseFloat(textoVida.innerText) - danoInimigoPreparado);
+    let vidaAtual = Math.max(0, parseFloat(textoVida.innerText) - danoGolpeConjunto);
     let vidaAntesDoGolpe = parseFloat(textoVida.innerText);
     textoVida.innerText = vidaAtual;
     sincronizarDanoDoTrio(idPuro, vidaAntesDoGolpe, vidaAtual);
 
     // 🪃 COLOQUE ESTE BLOCO AQUI: Ricochete do Bumerskeleton do Inimigo
     try {
-        if (ultimaCartaOponente && ultimaCartaOponente.nome === "Bumerskeleton") {
+        if (atacanteAtualEh("Bumerskeleton")) {
             if (typeof executarChainBumerangue === "function") {
                 executarChainBumerangue(ultimoIdQueAtacou, idPuro, "campo-j1");
             }
@@ -3544,23 +3784,11 @@ function aplicarDanoInimigo(idPacoteAlvo) {
             "Seu Barril quebrou!"
         );
     } else {
-        narrar(`Sua carta sofreu ${danoInimigoPreparado} de dano!`);
+        narrar(`Sua carta sofreu ${danoGolpeConjunto} de dano!`);
     }
-
-    // 👥 SEPARADO/SEPARADOIS (inimigo) — quem atacou é a parceira, o Separado é arrastado
-    // junto (exceto durante a habilidade dividida do dado 6).
-    let idSeparadoAtivoDivididoInimigo = obterSeparadaoDivididoAtivo(ultimoIdQueAtacou);
-    let idSeparadoPuxadoInimigo = idSeparadoAtivoDivididoInimigo ? null : encontrarSeparadoParceiroDe(ultimoIdQueAtacou);
-    if (idSeparadoPuxadoInimigo) {
-        let pacoteSeparado = document.getElementById("pacote-" + idSeparadoPuxadoInimigo);
-        let pacoteAlvoAindaExiste = document.getElementById(idPacoteAlvo);
-        if (pacoteSeparado && pacoteAlvoAindaExiste) {
-            let danoSeparado = parseFloat(document.getElementById("dano-" + idSeparadoPuxadoInimigo).innerText) || 0;
-            let nomeSeparado = pacoteSeparado.querySelector(".nome-carta").innerText.trim();
-            narrar(`👥 ${nomeSeparado} do oponente atacou junto com a parceira, causando ${danoSeparado} de dano no mesmo alvo!`);
-            animarAtaqueConjuntoSeparado(idSeparadoPuxadoInimigo, ultimoIdQueAtacou, idPacoteAlvo);
-            aplicarDanoAtaqueArea(idPacoteAlvo, danoSeparado, true);
-        }
+    if (parceirosSeparado.length > 0) {
+        let bonus = danoGolpeConjunto - danoInimigoPreparado;
+        narrar(`👥 A parceria do oponente somou ${bonus} de dano ao golpe (${danoGolpeConjunto} no total)!`);
     }
 
     // 🦇 VAMPI7 — ataca junto de qualquer carta do mesmo time que atacar.
@@ -4101,7 +4329,8 @@ function dispararSeteNegativoJuntoDoAtaque(idAtacante, idPacoteAlvo) {
             sete.idSete,
             idPacoteAlvo,
             indice === ataquesAcumulados.length - 1,
-            danoAlvoNoInicio
+            danoAlvoNoInicio,
+            indice
         );
     });
 
@@ -4255,10 +4484,17 @@ function dispararPortableJuntoDoAtaque(idAtacante, idPacoteAlvo, retanguloAlvoSa
 }
 
 // 💀 CEMITÉRIO — registra uma carta morta (nome de exibição + lado) pra Reviverta poder
-// trazer ela de volta depois. Só entra no cemitério quem tem uma entrada correspondente no
-// bancoDeCartas (formas especiais sem carta própria, tipo Ícaro/Thiago do Criador, ficam de fora).
+// trazer ela de volta depois. Formas temporárias retornam à identidade original da carta:
+// Ícaro e Thiago, por exemplo, entram no cemitério e revivem como Criador.
 function registrarMorte(nomeCarta, lado, dadosEspeciais) {
     if (!nomeCarta || (lado !== "j1" && lado !== "j2")) return;
+
+    let nomeNormalizado = String(nomeCarta).trim();
+    if (nomeNormalizado === "Ícaro" || nomeNormalizado === "Icaro" || nomeNormalizado === "Thiago") {
+        nomeNormalizado = "Criador";
+    }
+
+    nomeCarta = nomeNormalizado;
     let base = bancoDeCartas.find(c => c.nome === nomeCarta);
     // As divisões do Slime não entram separadamente no cemitério. O modo inimigo
     // chama esta opção somente quando a família inteira é derrotada.
@@ -4353,7 +4589,7 @@ function ativarPassivasAoMorrer(nomeCarta, idUnico, campoDestino, mensagemOrk, m
     // O pacote morto já foi removido; portanto somente Spiritistas que realmente
     // continuam vivos na arena recebem o crescimento desta morte.
     if (typeof window.rpgNotificarMorteAosSpiritistas === "function") {
-        window.rpgNotificarMorteAosSpiritistas(nomeCarta);
+        window.rpgNotificarMorteAosSpiritistas(nomeCarta, idUnico);
     }
     if (cartaSilenciadaPeloEcto(idUnico)) {
         // O observador da família Slime precisa enxergar esta marca depois que
@@ -4449,6 +4685,7 @@ function executarFaseIncendiario(idIncendiario, fase) {
     } else if (fase === 2 || fase === 3) {
         let alvos = incendiarioAlvos[idIncendiario] || [];
         let algumAtingido = false;
+        let alvosQueimados = [];
         let elementoDanoIncendiario = document.getElementById("dano-" + idIncendiario);
         let danoAtualIncendiario = elementoDanoIncendiario
             ? parseFloat(elementoDanoIncendiario.innerText)
@@ -4462,12 +4699,14 @@ function executarFaseIncendiario(idIncendiario, fase) {
                 animarFogoIncendiario(idAlvo, fase === 2);
                 aplicarDanoDireto(idAlvo, danoPorQueimada, ladoInimigo === "j2");
                 algumAtingido = true;
+                alvosQueimados.push(idAlvo);
             }
         });
         if (algumAtingido) {
             narrar(fase === 2
                 ? `🔥 ${rotuloInc} acendeu a pólvora! ${danoPorQueimada} de dano em cada carta atingida (metade do seu ataque atual).`
                 : `🔥 A pólvora do ${rotuloInc} continua queimando! Mais ${danoPorQueimada} de dano em cada carta atingida.`);
+            atacarComSeparadosParceirosDaQueimada(idIncendiario, alvosQueimados, ladoInc);
         }
     } else if (fase === 4) {
         incendiarioFasesVisuais[idIncendiario] = 4;
@@ -4772,25 +5011,23 @@ function _calcularAtaqueCavaleiro(idCavaleiro, vizinhos) {
 // Por isso a parceria do Separado precisa ser chamada explicitamente aqui.
 // O dano do Separado é lido no instante do golpe e somado no alvo principal.
 function _dispararSeparadoJuntoDoCavaleiro(idCavaleiro, idPacoteAlvo, danoCavaleiro, cavaleiroInimigo) {
-    if (obterSeparadaoDivididoAtivo(idCavaleiro)) return 0;
-
-    let idSeparado = encontrarSeparadoParceiroDe(idCavaleiro);
-    if (!idSeparado) return 0;
-
-    let pacoteSeparado = document.getElementById("pacote-" + idSeparado);
     let pacoteCavaleiro = document.getElementById("pacote-" + idCavaleiro);
     let pacoteAlvo = document.getElementById(idPacoteAlvo);
-    let danoSeparadoEl = document.getElementById("dano-" + idSeparado);
-    if (!pacoteSeparado || !pacoteCavaleiro || !pacoteAlvo || !danoSeparadoEl) return 0;
+    if (!pacoteCavaleiro || !pacoteAlvo) return 0;
 
-    let danoSeparado = parseFloat(danoSeparadoEl.innerText) || 0;
-    let nomeSeparado = pacoteSeparado.querySelector(".nome-carta").innerText.trim();
-    let danoTotal = danoCavaleiro + danoSeparado;
-
-    animarAtaqueConjuntoSeparado(idSeparado, idCavaleiro, idPacoteAlvo);
-    aplicarDanoAtaqueArea(idPacoteAlvo, danoSeparado, cavaleiroInimigo);
-    narrar(`👥 ${nomeSeparado} atacou junto com o Cavaleiro das Trevas: +${danoSeparado} no alvo principal (${danoTotal} de dano no total)!`);
-    return danoSeparado;
+    let lado = cavaleiroInimigo ? "j2" : "j1";
+    let parceiros = obterSeparadosQueAcompanhamAtaque(idCavaleiro, lado);
+    let bonus = 0;
+    parceiros.forEach(parceiro => {
+        if (!document.getElementById(idPacoteAlvo)) return;
+        animarAtaqueConjuntoSeparado(parceiro.id, parceiro.idParceiro || idCavaleiro, idPacoteAlvo);
+        aplicarDanoAtaqueArea(idPacoteAlvo, parceiro.dano, cavaleiroInimigo);
+        bonus += parceiro.dano;
+    });
+    if (bonus > 0) {
+        narrar(`👥 A parceria atacou junto com o Cavaleiro das Trevas: +${bonus} no alvo principal (${danoCavaleiro + bonus} no total)!`);
+    }
+    return bonus;
 }
 
 function aplicarAlvoCavaleiro(idPacoteAlvo) {
@@ -4950,20 +5187,99 @@ function animarAjusteThiago(idOrigem, idAlvo, atributo, aumentar) {
 // suporte/poção, nunca no próprio "Criador"), mantendo a vida e o dano atuais dela.
 // Recria a carta do zero (mesmo padrão que converterCartaRoubada usa pro Bruxo) pra ela
 // realmente ganhar a passiva e a Habilidade da carta sorteada, não só o nome/imagem.
+function identidadeTransformacaoIcaro(nome) {
+    let nomeLimpo = (nome || "").replace(/\s*\(S\/Hab\)$/i, "").trim();
+    if (nomeLimpo === "Ctrl C" || nomeLimpo === "Ctrl V") return "Ctrl";
+    if (nomeLimpo === "Separado" || nomeLimpo === "Separadois") return "Separado";
+    return nomeLimpo;
+}
+
+function limparCopiaCtrlTransformadaPorIcaro(idUnico) {
+    if (typeof ctrlV === "undefined" || !ctrlV[idUnico]) return;
+
+    let tinhaEscudoDaIdentidadeCopiada = typeof escudoGuerreiro !== "undefined" && !!escudoGuerreiro[idUnico];
+    if (typeof limparFormaCriadorDoCtrl === "function") limparFormaCriadorDoCtrl(idUnico);
+    if (typeof window.rpgDesvincularCtrlDeFamiliaEspecial === "function") {
+        window.rpgDesvincularCtrlDeFamiliaEspecial(idUnico);
+    }
+
+    // A carta deixa de ser Ctrl de verdade. Portanto, nenhum estado da antiga
+    // identidade copiada pode continuar agindo por trás da nova carta sorteada.
+    delete ctrlV[idUnico];
+    if (typeof cavalosDeTroiaAtivos !== "undefined") delete cavalosDeTroiaAtivos[idUnico];
+    if (typeof portableDuracao !== "undefined") delete portableDuracao[idUnico];
+    if (typeof incendiarioCiclo !== "undefined") delete incendiarioCiclo[idUnico];
+    if (typeof incendiarioAlvos !== "undefined") delete incendiarioAlvos[idUnico];
+    if (typeof incendiarioFasesVisuais !== "undefined") delete incendiarioFasesVisuais[idUnico];
+    if (typeof parceriaSeparado !== "undefined") delete parceriaSeparado[idUnico];
+    if (typeof separadaoDividido !== "undefined") delete separadaoDividido[idUnico];
+    if (typeof separadaoAtacantesNaSequencia !== "undefined") delete separadaoAtacantesNaSequencia[idUnico];
+    if (typeof especialFixoSeparado !== "undefined") delete especialFixoSeparado[idUnico];
+    if (typeof bonusUnidao !== "undefined") delete bonusUnidao[idUnico];
+    if (typeof alvosDoBarril !== "undefined") delete alvosDoBarril[idUnico];
+    if (typeof barrilJaImpactou !== "undefined") delete barrilJaImpactou[idUnico];
+    if (typeof viajantesJaUsaram !== "undefined") delete viajantesJaUsaram[idUnico];
+    if (typeof especialFixoBumerskeleton !== "undefined") delete especialFixoBumerskeleton[idUnico];
+    if (typeof recargaGeloBumerskeleton !== "undefined") delete recargaGeloBumerskeleton[idUnico];
+    if (typeof bonusVampi7Sozinho !== "undefined") delete bonusVampi7Sozinho[idUnico];
+    if (typeof alvosDoBumerangue !== "undefined") delete alvosDoBumerangue[idUnico];
+    if (typeof trajetosVisuaisBumerangue !== "undefined") delete trajetosVisuaisBumerangue[idUnico];
+    if (typeof goblinJaAtacouNesteTurno !== "undefined") delete goblinJaAtacouNesteTurno[idUnico];
+    if (typeof goblinAtaquesGanhos !== "undefined") delete goblinAtaquesGanhos[idUnico];
+    if (typeof splashBarbaroAtivo !== "undefined") delete splashBarbaroAtivo[idUnico];
+    if (typeof escudoGuerreiro !== "undefined") delete escudoGuerreiro[idUnico];
+    if (typeof unidadesVivasTrios !== "undefined") delete unidadesVivasTrios[idUnico];
+    if (typeof ladraoUsosPorCarta !== "undefined") delete ladraoUsosPorCarta[idUnico];
+    if (typeof ladroesQueJaRoubaram !== "undefined") delete ladroesQueJaRoubaram[idUnico];
+    if (typeof orkBuffado !== "undefined") delete orkBuffado[idUnico];
+    if (typeof cavaleiroAtivado !== "undefined") delete cavaleiroAtivado[idUnico];
+    if (typeof window.mensageirosEmArea !== "undefined") delete window.mensageirosEmArea[idUnico];
+    if (typeof danoCavaleirosAoVivo !== "undefined" && danoCavaleirosAoVivo.delete) danoCavaleirosAoVivo.delete(idUnico);
+    if (typeof atributosAoVivo !== "undefined" && atributosAoVivo.delete) atributosAoVivo.delete(idUnico);
+
+    // Se o Ctrl copiado estava agindo como Barril protetor, a transformação
+    // liberta somente as cartas protegidas POR ele. Uma proteção recebida de
+    // outro Barril continua ligada ao alvo transformado.
+    if (typeof cartasProtegidas !== "undefined") {
+        Object.keys(cartasProtegidas).forEach(idProtegido => {
+            if (String(cartasProtegidas[idProtegido]) !== String(idUnico)) return;
+            if (typeof quebrarVisualProtecaoBarril === "function") {
+                quebrarVisualProtecaoBarril(idProtegido, false);
+            }
+            delete cartasProtegidas[idProtegido];
+        });
+    }
+    if (typeof restaurarPosicaoBarril === "function") restaurarPosicaoBarril(idUnico);
+    if (typeof sincronizarVisuaisProtecaoBarril === "function") sincronizarVisuaisProtecaoBarril();
+    if (tinhaEscudoDaIdentidadeCopiada && typeof quebrarVisualEscudo === "function") quebrarVisualEscudo(idUnico);
+    if (typeof sincronizarVisuaisIncendiario === "function") sincronizarVisuaisIncendiario();
+    if (typeof window.rpgSincronizarFraguers === "function") window.rpgSincronizarFraguers();
+}
+
 function aplicarTransformacaoIcaro(idPacoteAlvo) {
     let pacoteAlvo = document.getElementById(idPacoteAlvo);
     if (!pacoteAlvo) return;
 
-    let candidatas = bancoDeCartas.filter(c => !suportesReais.includes(c.id) && c.id !== "criador");
+    let idUnico = idPacoteAlvo.replace("pacote-", "");
+    let nomeAntigo = pacoteAlvo.querySelector(".nome-carta").innerText.trim();
+    let nomeEfetivo = /^Ctrl [CV]$/.test(nomeAntigo)
+        ? obterNomeEfetivoCarta(idUnico, nomeAntigo)
+        : nomeAntigo;
+    let identidadeAntiga = identidadeTransformacaoIcaro(nomeEfetivo);
+    let identidadeFisicaAntiga = identidadeTransformacaoIcaro(nomeAntigo);
+    let candidatas = bancoDeCartas.filter(c => !suportesReais.includes(c.id)
+        && c.id !== "criador"
+        // Um Ctrl copiando Unidão não pode sortear nem Unidão (poder atual),
+        // nem Ctrl C/Ctrl V (a carta física que ele já era).
+        && identidadeTransformacaoIcaro(c.nome) !== identidadeAntiga
+        && identidadeTransformacaoIcaro(c.nome) !== identidadeFisicaAntiga);
     if (candidatas.length === 0) return;
     let novaCartaInfo = candidatas[Math.floor(Math.random() * candidatas.length)];
 
-    let idUnico = idPacoteAlvo.replace("pacote-", "");
     let vidaEl = document.getElementById("vida-" + idUnico);
     let danoEl = document.getElementById("dano-" + idUnico);
     let vidaAtual = vidaEl ? vidaEl.innerText : novaCartaInfo.vida;
     let danoAtual = danoEl ? danoEl.innerText : novaCartaInfo.dano;
-    let nomeAntigo = pacoteAlvo.querySelector(".nome-carta").innerText.trim();
     let estavaCongelada = pacoteAlvo.classList.contains("congelada");
     let ehAliado = pacoteAlvo.closest("#campo-j1") !== null;
 
@@ -4974,6 +5290,8 @@ function aplicarTransformacaoIcaro(idPacoteAlvo) {
     let transformacaoFamiliaSlime = typeof window.rpgPrepararTransformacaoFamiliaSlime === "function"
         ? window.rpgPrepararTransformacaoFamiliaSlime(idUnico)
         : null;
+
+    limparCopiaCtrlTransformadaPorIcaro(idUnico);
 
     let cartaObj = { nome: novaCartaInfo.nome, idUnico: idUnico, img: novaCartaInfo.img, vida: vidaAtual, dano: danoAtual };
     let classeCss = ehAliado ? "carta-aliada" : "carta-inimiga";
@@ -5089,6 +5407,95 @@ function encontrarSeparadoParceiroDe(idCartaQueAtacou) {
     return null;
 }
 
+// Uma carta pode ter mais de um Separado ligado a ela e os vínculos podem formar
+// correntes. Ex.: Separado A -> Separado B -> Guerreiro. Quando o Guerreiro ataca,
+// B acompanha e, como B também atacou, A acompanha B. Cada carta entra uma única
+// vez no golpe, mesmo quando existem vários ramos de parceria.
+function obterSeparadosQueAcompanhamAtaque(idAtacante, lado) {
+    let pacoteAtacante = document.getElementById("pacote-" + idAtacante);
+    if (!pacoteAtacante?.closest("#campo-" + lado)) return [];
+
+    let encontrados = [];
+    let idsIncluidos = new Set([idAtacante]);
+    let fila = [idAtacante];
+
+    while (fila.length > 0) {
+        let idParceiroQueAtacou = fila.shift();
+
+        Object.keys(parceriaSeparado || {}).forEach(idSeparado => {
+            if (parceriaSeparado[idSeparado] !== idParceiroQueAtacou
+                || idsIncluidos.has(idSeparado)
+                || separadaoDividido[idSeparado] > 0) return;
+
+            let pacoteSeparado = document.getElementById("pacote-" + idSeparado);
+            if (!pacoteSeparado?.closest("#campo-" + lado)
+                || pacoteSeparado.classList.contains("congelada")
+                || cartaSilenciadaPeloEcto(idSeparado)) return;
+
+            let dano = parseFloat(document.getElementById("dano-" + idSeparado)?.innerText) || 0;
+            let nome = pacoteSeparado.querySelector(".nome-carta")?.innerText?.trim() || "Separado";
+            idsIncluidos.add(idSeparado);
+            encontrados.push({
+                id: idSeparado,
+                idParceiro: idParceiroQueAtacou,
+                dano: Math.max(0, dano),
+                nome
+            });
+            fila.push(idSeparado);
+        });
+    }
+
+    return encontrados;
+}
+
+// Cada fase de dano do Incendiário conta como ataque para seus parceiros.
+// O Separado acerta uma carta que foi queimada e ainda está viva.
+function atacarComSeparadosParceirosDaQueimada(idIncendiario, alvosQueimados, ladoInc) {
+    let ladoAlvo = ladoInc === "j1" ? "j2" : "j1";
+    let pacoteInc = document.getElementById("pacote-" + idIncendiario);
+    if (!pacoteInc?.closest("#campo-" + ladoInc)) return;
+
+    obterSeparadosQueAcompanhamAtaque(idIncendiario, ladoInc).forEach(parceiro => {
+        let idAlvo = alvosQueimados.find(id => document.getElementById(id)?.closest("#campo-" + ladoAlvo));
+        if (!idAlvo) return;
+
+        animarAtaqueConjuntoSeparado(parceiro.id, parceiro.idParceiro || idIncendiario, idAlvo);
+        aplicarDanoAtaqueArea(idAlvo, parceiro.dano, ladoAlvo === "j2");
+        narrar(`👥 ${parceiro.nome} atacou uma das cartas queimadas pelo Incendiário, causando ${parceiro.dano} de dano!`);
+    });
+}
+
+function parceiraDoSeparadoEhIncendiario(idSeparado) {
+    let idParceira = parceriaSeparado[idSeparado];
+    let visitados = new Set([idSeparado]);
+
+    // Se o Separado estiver ligado a outro Separado, acompanha a corrente até a
+    // carta principal. Assim uma corrente ligada ao Incendiário também é puxada
+    // automaticamente por cada fase da queimada.
+    while (idParceira && parceriaSeparado[idParceira] && !visitados.has(idParceira)) {
+        visitados.add(idParceira);
+        idParceira = parceriaSeparado[idParceira];
+    }
+
+    let pacoteParceira = idParceira ? document.getElementById("pacote-" + idParceira) : null;
+    let nomeExibido = pacoteParceira?.querySelector(".nome-carta")?.innerText?.trim();
+    return !!pacoteParceira && obterNomeEfetivoCarta(idParceira, nomeExibido) === "Incendiário";
+}
+
+// Evita A -> B -> A. Uma corrente circular não teria uma carta principal para
+// apertar Atacar e também poderia fazer o mesmo Separado entrar mais de uma vez.
+function parceriaSeparadoCriariaCiclo(idSeparado, idNovoParceiro) {
+    let atual = idNovoParceiro;
+    let visitados = new Set();
+
+    while (atual && !visitados.has(atual)) {
+        if (atual === idSeparado) return true;
+        visitados.add(atual);
+        atual = parceriaSeparado[atual];
+    }
+    return false;
+}
+
 // 👥 SEPARADO/SEPARADOIS — resolve o clique de quem vira parceira.
 function aplicarParceriaSeparado(idPacoteAlvo) {
     let idPuro = idPacoteAlvo.replace("pacote-", "");
@@ -5107,12 +5514,18 @@ function aplicarParceriaSeparado(idPacoteAlvo) {
     }
 
     let idSeparado = idSeparadoParceriaAtivo;
+    if (parceriaSeparadoCriariaCiclo(idSeparado, idPuro)) {
+        return narrar("❌ Essa ligação fecharia um círculo entre os Separados. Escolha uma corrente que termine em outra carta.");
+    }
     parceriaSeparado[idSeparado] = idPuro;
     // Se esta carta já conquistou o Especial permanente, trocar de parceira não o apaga:
     // a nova dupla já fica pronta para atacar alvos diferentes.
-    if (especialFixoSeparado[idSeparado] === true) {
+    if (especialFixoSeparado[idSeparado] === true && !parceiraDoSeparadoEhIncendiario(idSeparado)) {
         separadaoDividido[idSeparado] = 2;
         separadaoAtacantesNaSequencia[idSeparado] = [];
+    } else {
+        delete separadaoDividido[idSeparado];
+        delete separadaoAtacantesNaSequencia[idSeparado];
     }
     let nomeParceira = pacoteClicado.querySelector(".nome-carta").innerText.trim();
     narrar(`👥 Parceria formada com ${nomeParceira}! A partir de agora, elas atacam juntas o mesmo alvo.`);
@@ -5146,6 +5559,10 @@ function prepararEspeciaisFixosSeparadoDoTurno() {
         let pacoteParceira = idParceira ? document.getElementById("pacote-" + idParceira) : null;
         if (!pacoteParceira || pacoteParceira.parentElement !== campoAtual) return;
 
+        // A queimada já puxa o ataque da dupla; não espera um clique manual
+        // no Incendiário, que não possui esse botão após jogar a pólvora.
+        if (parceiraDoSeparadoEhIncendiario(idSeparado)) return;
+
         separadaoDividido[idSeparado] = 2;
         separadaoAtacantesNaSequencia[idSeparado] = [];
 
@@ -5160,9 +5577,8 @@ function prepararEspeciaisFixosSeparadoDoTurno() {
 function obterSeparadaoDivididoAtivo(idAtacante) {
     if (typeof separadaoDividido === 'undefined') return null;
     if (separadaoDividido[idAtacante] > 0) return idAtacante;
-    let idSeparadoParceiro = encontrarSeparadoParceiroDe(idAtacante);
-    if (idSeparadoParceiro && separadaoDividido[idSeparadoParceiro] > 0) return idSeparadoParceiro;
-    return null;
+    return Object.keys(parceriaSeparado).find(idSeparado =>
+        parceriaSeparado[idSeparado] === idAtacante && separadaoDividido[idSeparado] > 0) || null;
 }
 
 function obterSequenciaSeparadoPendenteDoLado(lado) {
@@ -5328,10 +5744,9 @@ function usarPassivaViajante(idUnico, botaoClicado) {
             if (btn.style.display === "none") btn.style.display = "";
         });
 
-        // O Ladrão volta a ter uma tentativa de roubo no turno em que o tempo
-        // retornou. Se já houver um roubo aguardando alvo, a própria função do
-        // Ladrão continua impedindo que outro seja iniciado ao mesmo tempo.
-        ladraoUsosPorLado[lado] = 0;
+        // O bot também precisa esquecer, por carta, as tentativas devolvidas
+        // pela viagem. Se já houver um roubo aguardando alvo, ele ainda precisa
+        // ser concluído antes de outro começar.
         if (typeof window.rpgBotReativarPassivasAposViagem === "function") {
             window.rpgBotReativarPassivasAposViagem(lado);
         }
@@ -5349,6 +5764,10 @@ function usarPassivaViajante(idUnico, botaoClicado) {
             }
             let nomeExibido = pacote.querySelector(".nome-carta")?.innerText.trim() || "";
             let nomeEfetivo = obterNomeEfetivoCarta(idCarta, nomeExibido);
+
+            // Cada Ladrão (inclusive um Ctrl copiando Ladrão) recupera somente
+            // a própria tentativa. Um não altera o estado dos demais.
+            if (nomeEfetivo === "Ladrão") delete ladraoUsosPorCarta[idCarta];
 
             // Goblin e o último integrante do Trio poderão rolar novamente a
             // Passiva no próximo ataque liberado pela viagem no tempo.
@@ -5461,6 +5880,10 @@ function aplicarAlvoBarril(idPacoteAlvo, viaEspecial) {
         return narrar("❌ Escolha uma carta do campo oposto para o Barril atacar!");
     }
 
+    // Quando o Especial já lança o Barril, o botão Atacar não foi usado. Ainda
+    // assim este impacto é o primeiro ataque da carta e deve contar para Velux.
+    ultimoIdQueAtacou = idBarrilAtivo;
+
     let nomeAlvo = pacoteAlvo.querySelector(".nome-carta").innerText;
     let isInimigoParaOJogo = (ladoAlvo === "j2"); 
 
@@ -5471,17 +5894,24 @@ function aplicarAlvoBarril(idPacoteAlvo, viaEspecial) {
     let idBarrilPuro = idBarrilAtivo;
     let idAlvoPuro = idPacoteAlvo.replace("pacote-", "");
     
-    alvosDoBarril[idBarrilPuro] = idAlvoPuro; 
-    animarLancamentoBarrilGoblin(idBarrilPuro, idAlvoPuro);
-
-    narrar(`🎯 Os Goblins do Barril focaram-se em [${nomeAlvo}]!`);
+    let barrilAindaNaoLancado = !barrilJaImpactou[idBarrilPuro];
+    alvosDoBarril[idBarrilPuro] = idAlvoPuro;
+    if (barrilAindaNaoLancado) {
+        animarLancamentoBarrilGoblin(idBarrilPuro, idAlvoPuro);
+        narrar(`🎯 Os Goblins do Barril focaram-se em [${nomeAlvo}]!`);
+    } else {
+        // Depois do primeiro lançamento (inclusive no segundo uso da Velux),
+        // apenas os goblins vivos e seu vínculo de dano periódico mudam de alvo.
+        sincronizarMarcadoresBarrilGoblin();
+        narrar(`👣 Os Goblins do Barril migraram para [${nomeAlvo}]! O Barril não foi lançado novamente.`);
+    }
 
     // LÊ O DANO EXTRA (BUFFS DA BESTA, UNIDÃO, ETC)
     let txtDanoBarril = document.getElementById("dano-" + idBarrilPuro);
     let buffDano = txtDanoBarril ? parseFloat(txtDanoBarril.innerText) : 0;
 
     // DANO DE IMPACTO
-    if (!barrilJaImpactou[idBarrilPuro]) {
+    if (barrilAindaNaoLancado) {
         barrilJaImpactou[idBarrilPuro] = true;
 
         // 🎯 Carta atacada: 1 de impacto + o dano atual do Barril (0,75 base dos 3 goblins,
@@ -5511,7 +5941,7 @@ function aplicarAlvoBarril(idPacoteAlvo, viaEspecial) {
         modoEspecialBarrilGoblin = false;
         usarHabilidade('Barril de Goblin', idBarrilPuro, null);
     }
-    passarTurno(); 
+    passarTurnoSeForVezDaCarta(idBarrilPuro);
 }
 
 // 🧪 RECUPERIDA — o frasco cai de cima da carta; no impacto, o coração que já
@@ -6771,7 +7201,8 @@ function executarTraicao(idAlvoPacote) {
     let danoElemento = document.getElementById("dano-" + idTraidor);
     let danoDoTraidor = danoElemento ? parseFloat(danoElemento.innerText) : 0;
     
-    narrar(`🗡️ TRAIÇÃO! [${nomeTraidor}] esfaqueou seu próprio parceiro [${nomeVitima}] causando ${danoDoTraidor} de dano! Turno encerrado!`);
+    let traicaoEncerraTurno = ehVezDaCarta(idTraidor);
+    narrar(`🗡️ TRAIÇÃO! [${nomeTraidor}] esfaqueou seu próprio parceiro [${nomeVitima}] causando ${danoDoTraidor} de dano! ${traicaoEncerraTurno ? "Turno encerrado!" : "Ação livre concluída sem alterar a vez atual!"}`);
     
     // Aplica o dano
     let isInimigo = (ladoVitima === "j2");
@@ -6779,11 +7210,12 @@ function executarTraicao(idAlvoPacote) {
     aplicarDanoDireto(idAlvoPacote, danoDoTraidor, isInimigo);
 
     // Finaliza e desliga o modo traição
+    let idTraidorQueAtacou = idTraidor;
     modoTraicao = false;
     idTraidor = null;
 
-    // 🔥 AQUI ESTÁ A MÁGICA: Passa o turno automaticamente após a traição!
-    passarTurno();
+    // Fora do turno, a poção resolve como ação livre sem trocar a vez atual.
+    passarTurnoSeForVezDaCarta(idTraidorQueAtacou);
 }
 // 🪵 Faz uma cópia visual do Barril rolar até o alvo. O impacto e a transformação reais
 // só são liberados quando ele chega, para a animação e a regra do jogo acontecerem juntas.
@@ -6854,7 +7286,7 @@ function animarBarrilBarbaroRolando(idBarril, idPacoteAlvo, aoImpactar) {
         barbaroVisual.className = "barbaro-saindo-do-impacto";
         let barbaroBase = bancoDeCartas.find(carta => carta.nome === "Bárbaro");
         let imagemBarbaro = document.createElement("img");
-        imagemBarbaro.src = barbaroBase ? barbaroBase.img : "barbaro.png";
+        imagemBarbaro.src = barbaroBase ? barbaroBase.img : caminhoImagemRpg("barbaro.png");
         imagemBarbaro.alt = "";
         barbaroVisual.appendChild(imagemBarbaro);
         impacto.appendChild(barbaroVisual);
@@ -7100,6 +7532,10 @@ function aplicarEspecialBumerskeletonAntesDeAtacar(idPacoteAlvo) {
     let ladoAlvo = pacoteAlvo.closest("#campo-j1") ? "j1" : "j2";
     if (ladoBume === ladoAlvo) return narrar("❌ Escolha uma carta do campo OPOSTO para o bumerangue acertar!");
 
+    // O lançamento pelo Especial substitui o ataque normal, que costuma definir
+    // este ID. Sem ele, passarTurno() não reconhece o segundo ataque da Velux.
+    ultimoIdQueAtacou = idBume;
+
     let idAlvoPuro = idPacoteAlvo.replace("pacote-", "");
     let txtDanoBume = document.getElementById("dano-" + idBume);
     let danoBase = txtDanoBume ? parseFloat(txtDanoBume.innerText) : 0;
@@ -7121,12 +7557,22 @@ function aplicarEspecialBumerskeletonAntesDeAtacar(idPacoteAlvo) {
 
     // Se o alvo já morreu com o golpe inicial, a cadeia continua nos outros normalmente.
     executarChainBumerangue(idBume, idAlvoPuro, campoAlvoId, () => {
+        if (!bumerangueAindaTemDono(idBume)) {
+            delete alvosDoBumerangue[idBume];
+            delete trajetosVisuaisBumerangue[idBume];
+            if (turnoAtivo === (ladoBume === "j1" ? 1 : 2)) passarTurno();
+            return;
+        }
         usarHabilidade("Bumerskeleton", idBume, null);
     });
 }
 
 function executarChainBumerangue(idBumerskeleton, idPrimeiroAlvo, campoAlvoId, aoConcluir) {
     try {
+        if (!bumerangueAindaTemDono(idBumerskeleton)) {
+            if (typeof aoConcluir === "function") aoConcluir();
+            return;
+        }
         if (typeof alvosDoBumerangue === 'undefined') {
             return narrar("⚠️ Erro: As variáveis do bumerangue estão faltando no topo do main.js!");
         }
@@ -7162,6 +7608,9 @@ function executarChainBumerangue(idBumerskeleton, idPrimeiroAlvo, campoAlvoId, a
             );
 
             setTimeout(() => {
+                // Um ricochete agendado não pode continuar atacando depois que
+                // o Bumerskeleton morreu ou foi transformado em outra carta.
+                if (!bumerangueAindaTemDono(idBumerskeleton)) return;
                 let txtVida = document.getElementById("vida-" + idOutroAlvo);
                 let nomeAlvo = pacote.querySelector(".nome-carta").innerText;
                 
@@ -7569,6 +8018,7 @@ window.onload = function() {
 
     // Se uma carta protegida/envenenada/marcada for recriada ou movida, o visual reaparece nela.
     new MutationObserver(() => {
+        removerVoosSemBumerskeleton();
         sincronizarVisuaisEscudo();
         sincronizarVisuaisVenenoMago();
         sincronizarVisuaisIncendiario();

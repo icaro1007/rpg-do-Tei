@@ -25,7 +25,7 @@
         window.__rpgBotJogando = valor;
     }
     let acoesNesteTurno = 0;
-    let ladraoUsosNesteTurno = 0; // trava pra não ficar girando a Passiva do Ladrão o turno inteiro
+    let ladroesUsadosNesteTurno = {}; // idUnico -> true; cada Ladrão do bot tenta uma vez
 
     function cancelarCicloBotAgendado() {
         if (timerCicloBot !== null) clearTimeout(timerCicloBot);
@@ -128,6 +128,7 @@
         if (!el) return false;
         let img = el.querySelector("img");
         if (!img) return false;
+        window.__rpgCliqueAutomaticoBot = true;
         try {
             if (typeof img.onclick === "function") {
                 img.onclick(); // dispara o handler de batalha já anexado à carta
@@ -139,8 +140,16 @@
             }
         } catch (e) {
             console.warn("[BOT] erro ao simular clique em", idUnico, e);
+        } finally {
+            window.__rpgCliqueAutomaticoBot = false;
         }
         return true;
+    }
+
+    function cartaPertenceAoBot(idUnico) {
+        let id = String(idUnico ?? "").replace("pacote-", "");
+        let pacote = id ? document.getElementById("pacote-" + id) : null;
+        return !!pacote?.closest("#campo-j2, #mao-j2");
     }
 
     // -------------------------------------------------------------------
@@ -290,7 +299,7 @@
         }
 
         // --- Suporte/poção engatilhado (Besta, Velux, Adiv, Recuperida, Traição-passo1) ---
-        if (typeof suportePreparado !== "undefined" && suportePreparado !== null) {
+        if (typeof suportePreparado !== "undefined" && suportePreparado !== null && cartaPertenceAoBot(idItemNaMao)) {
             let tipo = suportePreparado;
             let ofensivo = (tipo === "Adiv" || tipo === "Traicao");
             let candidatos = ofensivo
@@ -313,7 +322,7 @@
         }
 
         // --- Traição já com traidor escolhido, falta escolher o parceiro-vítima ---
-        if (typeof modoTraicao !== "undefined" && modoTraicao === true) {
+        if (typeof modoTraicao !== "undefined" && modoTraicao === true && cartaPertenceAoBot(idTraidor)) {
             let traidorEl = document.getElementById("pacote-" + idTraidor);
             if (!traidorEl) return false;
             let ehJ1 = traidorEl.closest("#campo-j1") !== null;
@@ -325,7 +334,7 @@
         }
 
         // --- Poção de Gelo (alvo simples) aguardando escolha ---
-        if (typeof modoGeloSimples !== "undefined" && modoGeloSimples === true) {
+        if (typeof modoGeloSimples !== "undefined" && modoGeloSimples === true && cartaPertenceAoBot(idPocaoAtiva)) {
             let pocao = document.getElementById("pacote-" + idPocaoAtiva);
             let jogadaPeloBot = pocao && pocao.parentElement && pocao.parentElement.id.includes("j2");
             // Observação: mirar em cartas ainda na MÃO do adversário não funciona corretamente
@@ -340,7 +349,7 @@
         }
 
         // --- ☠️ Mago aguardando a escolha de quem receberá o veneno ---
-        if (typeof modoAlvoVenenoMago !== "undefined" && modoAlvoVenenoMago === true) {
+        if (typeof modoAlvoVenenoMago !== "undefined" && modoAlvoVenenoMago === true && cartaPertenceAoBot(idMagoVenenoAtivo)) {
             let magoEl = document.getElementById("pacote-" + idMagoVenenoAtivo);
             if (!magoEl) return false;
             let ehJ1 = magoEl.closest("#campo-j1") !== null;
@@ -351,7 +360,7 @@
         }
 
         // --- Barril de Goblin aguardando alvo ---
-        if (typeof modoAlvoBarril !== "undefined" && modoAlvoBarril === true) {
+        if (typeof modoAlvoBarril !== "undefined" && modoAlvoBarril === true && cartaPertenceAoBot(idBarrilAtivo)) {
             let barrilEl = document.getElementById("pacote-" + idBarrilAtivo);
             if (!barrilEl) return false;
             let ehJ1 = barrilEl.closest("#campo-j1") !== null;
@@ -379,7 +388,7 @@
         }
 
         // --- 👥 Separado/Separadois do bot aguardando escolha de parceira ---
-        if (typeof modoParceriaSeparado !== "undefined" && modoParceriaSeparado === true) {
+        if (typeof modoParceriaSeparado !== "undefined" && modoParceriaSeparado === true && cartaPertenceAoBot(idSeparadoParceriaAtivo)) {
             let candidatos = idsNoContainer("campo-j2", "carta-inimiga")
                 .filter(id => "pacote-" + id !== "pacote-" + idSeparadoParceriaAtivo);
             if (candidatos.length === 0) return false;
@@ -404,7 +413,7 @@
 
         // --- 💰 Ladrão do bot aguardando alvo (fase 1: rouba do inimigo; fase 2: entrega o
         // bônus pra uma carta do próprio time) ---
-        if (typeof modoLadrao !== "undefined" && modoLadrao === true) {
+        if (typeof modoLadrao !== "undefined" && modoLadrao === true && cartaPertenceAoBot(idLadraoRouboAtivo)) {
             if (typeof faseLadrao !== "undefined" && faseLadrao === 2) {
                 let candidatos = idsNoContainer("campo-j2", "carta-inimiga");
                 if (candidatos.length === 0) return false;
@@ -419,7 +428,7 @@
 
         // --- 🩸 Goblin do bot aguardando escolha de alvo (roubo tem 2 fases: de quem
         // rouba e pra quem entrega) ---
-        if (typeof modoRouboGoblin !== "undefined" && modoRouboGoblin === true) {
+        if (typeof modoRouboGoblin !== "undefined" && modoRouboGoblin === true && cartaPertenceAoBot(idGoblinLadrao)) {
             let goblinEl = document.getElementById("pacote-" + idGoblinLadrao);
             if (!goblinEl) return false;
             let ehJ1 = goblinEl.closest("#campo-j1") !== null;
@@ -441,7 +450,7 @@
         }
 
         // --- 🎨 Ícaro do bot aguardando alvo (mira a maior ameaça do time do jogador) ---
-        if (typeof modoTransformacaoIcaro !== "undefined" && modoTransformacaoIcaro === true) {
+        if (typeof modoTransformacaoIcaro !== "undefined" && modoTransformacaoIcaro === true && cartaPertenceAoBot(idIcaroAtivo)) {
             let candidatos = idsNoContainer("campo-j1", "carta-aliada");
             if (candidatos.length === 0) return false;
             simularCliqueImagem(maiorAmeaca(candidatos));
@@ -449,7 +458,7 @@
         }
 
         // --- ⚖️ Thiago do bot aguardando alvo (enfraquece a maior ameaça do jogador) ---
-        if (typeof modoAjusteThiago !== "undefined" && modoAjusteThiago === true) {
+        if (typeof modoAjusteThiago !== "undefined" && modoAjusteThiago === true && cartaPertenceAoBot(idThiagoAtivo)) {
             let candidatos = idsNoContainer("campo-j1", "carta-aliada");
             if (candidatos.length === 0) return false;
             simularCliqueImagem(maiorAmeaca(candidatos));
@@ -457,7 +466,7 @@
         }
 
         // --- ⏳ Viajante do Tempo do bot aguardando escolha de quem prender ---
-        if (typeof modoPrenderNoTempo !== "undefined" && modoPrenderNoTempo === true) {
+        if (typeof modoPrenderNoTempo !== "undefined" && modoPrenderNoTempo === true && cartaPertenceAoBot(idPrenderNoTempoAtivo)) {
             let vjEl = document.getElementById("pacote-" + idPrenderNoTempoAtivo);
             if (!vjEl) return false;
             let ehJ1 = vjEl.closest("#campo-j1") !== null;
@@ -468,8 +477,8 @@
         }
 
         // --- 🔮 Bruxo do bot aguardando escolha de alvo (transformar ou roubar) ---
-        if ((typeof modoBruxoTransformar !== "undefined" && modoBruxoTransformar === true) ||
-            (typeof modoBruxoRoubar !== "undefined" && modoBruxoRoubar === true)) {
+        if (((typeof modoBruxoTransformar !== "undefined" && modoBruxoTransformar === true) ||
+            (typeof modoBruxoRoubar !== "undefined" && modoBruxoRoubar === true)) && cartaPertenceAoBot(idBruxoAtivo)) {
             let bxEl = document.getElementById("pacote-" + idBruxoAtivo);
             if (!bxEl) return false;
             let ehJ1 = bxEl.closest("#campo-j1") !== null;
@@ -482,14 +491,20 @@
         // --- 🛡️ Barril do bot aguardando escolha de quem proteger (protege o mais frágil) ---
         if (typeof modoProtecaoBarrilInimigo !== "undefined" && modoProtecaoBarrilInimigo === true) {
             let candidatos = idsNoContainer("campo-j2", "carta-inimiga")
-                .filter(id => id !== idBarrilProtetor);
-            if (candidatos.length === 0) return false;
+                .filter(id => typeof podeVincularProtecaoBarril === "function"
+                    ? podeVincularProtecaoBarril(id, idBarrilProtetor)
+                    : id !== idBarrilProtetor);
+            if (candidatos.length === 0) {
+                modoProtecaoBarrilInimigo = false;
+                idBarrilProtetor = null;
+                return false;
+            }
             simularCliqueImagem(alvoMaisFragil(candidatos));
             return true;
         }
 
         // --- 📦 Barril de Goblin: Especial usado ANTES de atacar, aguardando alvo ---
-        if (typeof modoEspecialBarrilGoblin !== "undefined" && modoEspecialBarrilGoblin === true) {
+        if (typeof modoEspecialBarrilGoblin !== "undefined" && modoEspecialBarrilGoblin === true && cartaPertenceAoBot(idBarrilAtivo)) {
             let barrilEl = document.getElementById("pacote-" + idBarrilAtivo);
             if (!barrilEl) return false;
             let ehJ1 = barrilEl.closest("#campo-j1") !== null;
@@ -500,7 +515,7 @@
         }
 
         // --- 🪃 Bumerskeleton: Especial usado ANTES de atacar, aguardando alvo ---
-        if (typeof modoEspecialBumerskeleton !== "undefined" && modoEspecialBumerskeleton === true) {
+        if (typeof modoEspecialBumerskeleton !== "undefined" && modoEspecialBumerskeleton === true && cartaPertenceAoBot(idBumerskeletonEspecialAtivo)) {
             let bumeEl = document.getElementById("pacote-" + idBumerskeletonEspecialAtivo);
             if (!bumeEl) return false;
             let ehJ1 = bumeEl.closest("#campo-j1") !== null;
@@ -522,10 +537,17 @@
             });
             let alvo = matavel.length > 0 ? maiorAmeaca(matavel) : alvoMaisFragil(candidatos);
 
-            // 🛡️ Se o alvo escolhido estiver protegido por um Barril, o jogo OBRIGA a atacar
-            // o Barril protetor primeiro (senão o ataque é recusado e o bot fica preso
-            // tentando o mesmo alvo pra sempre). Redireciona pro Barril, se ele ainda existir.
-            if (typeof cartasProtegidas !== "undefined" && cartasProtegidas[alvo]) {
+            // 🛡️ Percorre toda a cadeia de Barris. Se A protege B e B protege C,
+            // o bot deve atacar A primeiro, não insistir em B (que também está protegido).
+            // O Ecto é a exceção: seu toque atravessa a proteção e pode manter o alvo
+            // estratégico originalmente escolhido.
+            let ectoIgnoraProtecao = typeof atacanteAtualEh === "function" && atacanteAtualEh("Ecto");
+            let visitadosNaProtecao = new Set();
+            while (!ectoIgnoraProtecao
+                && typeof cartasProtegidas !== "undefined"
+                && cartasProtegidas[alvo]
+                && !visitadosNaProtecao.has(alvo)) {
+                visitadosNaProtecao.add(alvo);
                 let idBarrilProtetor = cartasProtegidas[alvo];
                 let barrilAindaExiste = document.getElementById("pacote-" + idBarrilProtetor);
                 let pacoteAlvo = document.getElementById("pacote-" + alvo);
@@ -535,10 +557,13 @@
                 // Vínculo válido só existe entre cartas do mesmo time. Se algum estado antigo
                 // ou habilidade defeituosa cruzar os lados, desfaz o vínculo em vez de mandar
                 // o bot clicar numa carta do próprio campo para sempre.
-                if (barrilAindaExiste && campoDoAlvo && campoDoBarril && campoDoAlvo === campoDoBarril) {
+                if (barrilAindaExiste && campoDoAlvo && campoDoBarril
+                    && campoDoAlvo === campoDoBarril
+                    && !visitadosNaProtecao.has(idBarrilProtetor)) {
                     alvo = idBarrilProtetor;
                 } else {
                     delete cartasProtegidas[alvo];
+                    break;
                 }
             }
 
@@ -628,7 +653,9 @@
     }
 
     function botJogarCartasDaMao() {
-        let idsMao = idsNaMao("mao-j2").filter(id => !cartaEstaFatigada(id));
+        let idsMao = idsNaMao("mao-j2")
+            .filter(id => !cartaEstaFatigada(id))
+            .filter(id => !estaCongelada(id));
         if (idsMao.length === 0) return false;
 
         // Prioriza colocar TROPAS em campo primeiro (presença no tabuleiro é quase sempre bom)
@@ -667,6 +694,7 @@
 
         let candidatos = idsNaMao("mao-j2")
             .filter(id => !cartaEstaFatigada(id))
+            .filter(id => !estaCongelada(id))
             .filter(cartaDaMaoEhTropa);
 
         if (candidatos.length === 0) {
@@ -711,6 +739,7 @@
     function botIncendiario() {
         let parados = idsNoContainer("campo-j2", "carta-inimiga")
             .filter(id => nomeDaCarta(id) === "Incendiário")
+            .filter(id => !estaCongelada(id))
             .filter(id => typeof incendiarioCiclo !== "undefined" && incendiarioCiclo[id] === undefined);
         if (parados.length === 0) return false;
 
@@ -745,27 +774,30 @@
     // então só vale a pena quando tem alguém realmente ferido pra curar.
     // -------------------------------------------------------------------
     function botUsarEspeciais() {
-        let idsComCarta = idsNoContainer("campo-j2", "carta-inimiga");
+        // Uma carta congelada continua mostrando seus botões, mas não pode usar
+        // Passiva, Especial, cura nem qualquer outra ação. Sem este filtro, a IA
+        // clicava no mesmo botão a cada ciclo, recebia a recusa de usar habilidade
+        // e imediatamente tentava de novo, deixando o turno preso.
+        let idsComCarta = idsNoContainer("campo-j2", "carta-inimiga")
+            .filter(id => !estaCongelada(id));
 
         // 💰 Ladrão: rola o dado da Passiva pra tentar abrir uma chance de roubo (o alvo,
         // quando abre, é resolvido depois em botResolverEscolhaPendente). É "usa quando
         // quiser" no jogo, mas limitamos a 1 tentativa por turno pro bot não ficar girando
         // essa passiva o turno inteiro em vez de atacar.
-        if (ladraoUsosNesteTurno < 1) {
-            for (let id of idsComCarta) {
-                if (nomeDaCarta(id) !== "Ladrão") continue;
-                if (typeof modoLadrao !== "undefined" && modoLadrao === true) continue; // já tem um roubo em andamento
-                let btnLadrao = document.querySelector('#pacote-' + cssEscape(id) + ' button[onclick*="usarPassivaLadrao"]');
-                if (!btnLadrao || btnLadrao.style.display === "none") continue;
-                ladraoUsosNesteTurno++;
-                try {
-                    usarPassivaLadrao(id, btnLadrao);
-                } catch (e) {
-                    console.warn("[BOT] erro na Passiva do Ladrão:", e);
-                    continue;
-                }
-                return true;
+        for (let id of idsComCarta) {
+            if (nomeDaCarta(id) !== "Ladrão" || ladroesUsadosNesteTurno[id]) continue;
+            if (typeof modoLadrao !== "undefined" && modoLadrao === true) continue; // termina o roubo atual antes do próximo Ladrão
+            let btnLadrao = document.querySelector('#pacote-' + cssEscape(id) + ' button[onclick*="usarPassivaLadrao"]');
+            if (!btnLadrao || btnLadrao.style.display === "none") continue;
+            ladroesUsadosNesteTurno[id] = true;
+            try {
+                usarPassivaLadrao(id, btnLadrao);
+            } catch (e) {
+                console.warn("[BOT] erro na Passiva do Ladrão:", e);
+                continue;
             }
+            return true;
         }
 
         // ⏳ Viajante do Tempo (Passiva "Viajar no Tempo"): só vale usar se tiver algum
@@ -939,7 +971,7 @@
             cancelarCicloBotAgendado();
             setBotJogando(false);
             acoesNesteTurno = 0;
-            ladraoUsosNesteTurno = 0;
+            ladroesUsadosNesteTurno = {};
             return;
         }
 
@@ -947,7 +979,7 @@
         if (acoesNesteTurno > MAX_ACOES_POR_TURNO) {
             console.warn("[BOT] limite de ações atingido, forçando passar o turno.");
             try { passarTurno(); } catch (e) { /* nada a fazer */ }
-            setBotJogando(false); acoesNesteTurno = 0; ladraoUsosNesteTurno = 0;
+            setBotJogando(false); acoesNesteTurno = 0; ladroesUsadosNesteTurno = {};
             return;
         }
 
@@ -974,7 +1006,7 @@
         setBotJogando(false);
         cancelarCicloBotAgendado();
         acoesNesteTurno = 0;
-        ladraoUsosNesteTurno = 0;
+        ladroesUsadosNesteTurno = {};
     }
 
     function verificarEIniciarBot() {
@@ -985,7 +1017,7 @@
                 cancelarCicloBotAgendado();
                 setBotJogando(false);
                 acoesNesteTurno = 0;
-                ladraoUsosNesteTurno = 0;
+                ladroesUsadosNesteTurno = {};
             }
             return;
         }
@@ -993,7 +1025,7 @@
         if (!botJogando) {
             setBotJogando(true);
             acoesNesteTurno = 0;
-            ladraoUsosNesteTurno = 0;
+            ladroesUsadosNesteTurno = {};
         }
 
         // Mesmo que uma reposição fora do turno tenha deixado botJogando=true,
@@ -1071,7 +1103,7 @@
     // O contador local do Ladrão pertence à IA e não é visível em main.js.
     // A viagem do tempo do lado do bot também precisa liberar essa tentativa.
     window.rpgBotReativarPassivasAposViagem = function (lado) {
-        if (lado === "j2") ladraoUsosNesteTurno = 0;
+        if (lado === "j2") ladroesUsadosNesteTurno = {};
     };
 
     // main.js/habilidades.js/cartas.js já devem ter carregado antes deste arquivo,

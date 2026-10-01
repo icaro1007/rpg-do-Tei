@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="720" viewBox="0 0 520 720" role="img" aria-labelledby="titulo descricao">
+  <title id="titulo">Esqueleto — imagem provisória</title>
+  <desc id="descricao">Cartão provisório para o inimigo Esqueleto.</desc>
+  <rect width="520" height="720" fill="#171923"/>
+  <rect x="18" y="18" width="484" height="684" rx="34" fill="#343745" stroke="#e8edf7" stroke-width="8"/>
+  <circle cx="260" cy="250" r="118" fill="#f1f1e8" stroke="#aeb4c3" stroke-width="8"/>
+  <ellipse cx="215" cy="238" rx="28" ry="35" fill="#252734"/>
+  <ellipse cx="305" cy="238" rx="28" ry="35" fill="#252734"/>
+  <path d="M260 270 l-20 34 h40z" fill="#252734"/>
+  <path d="M202 330 Q260 368 318 330" fill="none" stroke="#252734" stroke-width="12" stroke-linecap="round"/>
+  <path d="M206 405 L314 520 M314 405 L206 520" stroke="#f1f1e8" stroke-width="28" stroke-linecap="round"/>
+  <circle cx="206" cy="405" r="18" fill="#aeb4c3"/>
+  <circle cx="314" cy="405" r="18" fill="#aeb4c3"/>
+  <text x="260" y="592" text-anchor="middle" fill="#fff7c7" font-family="Arial, sans-serif" font-size="58" font-weight="700">ESQUELETO</text>
+  <text x="260" y="642" text-anchor="middle" fill="#d9deea" font-family="Arial, sans-serif" font-size="25">IMAGEM PROVISÓRIA</text>
+</svg>

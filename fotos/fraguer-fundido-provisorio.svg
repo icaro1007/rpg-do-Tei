@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420" role="img" aria-labelledby="t d">
+  <title id="t">Fraguer Fundido</title><desc id="d">Imagem provisória da fusão de quatro Fraguers.</desc>
+  <defs>
+    <radialGradient id="bg"><stop stop-color="#812441"/><stop offset="1" stop-color="#120711"/></radialGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe070"/><stop offset=".4" stop-color="#ff654f"/><stop offset="1" stop-color="#6b173c"/></linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="300" height="420" rx="20" fill="url(#bg)"/>
+  <path d="M65 269L82 126l68-69 68 69 17 143-48 42h-74z" fill="url(#body)" stroke="#ffe69a" stroke-width="8" filter="url(#glow)"/>
+  <path d="M99 134L55 77l79 30M201 134l44-57-79 30" fill="#bd3150" stroke="#ffe69a" stroke-width="8" stroke-linejoin="round"/>
+  <g fill="#fff6b0"><circle cx="113" cy="168" r="11"/><circle cx="143" cy="156" r="11"/><circle cx="173" cy="156" r="11"/><circle cx="203" cy="168" r="11"/></g>
+  <path d="M102 222c31 20 65 20 96 0" fill="none" stroke="#3b0d22" stroke-width="12" stroke-linecap="round"/>
+  <path d="M55 287l70-31M245 287l-70-31" stroke="#ffcc71" stroke-width="18" stroke-linecap="round"/>
+  <rect x="22" y="326" width="256" height="61" rx="15" fill="#180810" stroke="#ffd56c" stroke-width="4"/>
+  <text x="150" y="352" text-anchor="middle" fill="#fff7d2" font-size="22" font-family="Georgia,serif" font-weight="700">FRAGUER</text>
+  <text x="150" y="377" text-anchor="middle" fill="#ffcf63" font-size="20" font-family="Georgia,serif" font-weight="700">FUNDIDO</text>
+</svg>

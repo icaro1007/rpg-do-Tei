@@ -6,7 +6,7 @@
     
     <title>RPG do T&Í - Arena das Eras ⚔️</title>
     
-    <link rel="icon" type="image/png" href="icone.png">
+    <link rel="icon" type="image/png" href="fotos/icone.png">
     
     <link rel="stylesheet" href="style.css">
 </head>
@@ -14,7 +14,7 @@
 <section id="tela-inicio-rpg" aria-label="Tela inicial do RPG do T&Í">
     <header class="topo-menu-rpg">
         <div class="marca-rpg">
-            <img src="icone.png" alt="" class="marca-rpg-icone">
+            <img src="fotos/icone.png" alt="" class="marca-rpg-icone">
             <div>
                 <span class="marca-rpg-selo">ARENA DAS ERAS</span>
                 <strong>RPG do T&Í</strong>
@@ -57,10 +57,10 @@
                     <p id="texto-baus-inicio-rpg">Você ainda pode conquistar 4 baús hoje.</p>
                 </div>
                 <div class="grade-slots-baus-rpg" aria-label="Baús disponíveis">
-                    <button type="button" class="slot-bau-rpg" data-slot-bau="0"><img src="bau-recompensa.png" alt=""><small>Vazio</small></button>
-                    <button type="button" class="slot-bau-rpg" data-slot-bau="1"><img src="bau-recompensa.png" alt=""><small>Vazio</small></button>
-                    <button type="button" class="slot-bau-rpg" data-slot-bau="2"><img src="bau-recompensa.png" alt=""><small>Vazio</small></button>
-                    <button type="button" class="slot-bau-rpg" data-slot-bau="3"><img src="bau-recompensa.png" alt=""><small>Vazio</small></button>
+                    <button type="button" class="slot-bau-rpg" data-slot-bau="0"><img src="fotos/bau-recompensa.png" alt=""><small>Vazio</small></button>
+                    <button type="button" class="slot-bau-rpg" data-slot-bau="1"><img src="fotos/bau-recompensa.png" alt=""><small>Vazio</small></button>
+                    <button type="button" class="slot-bau-rpg" data-slot-bau="2"><img src="fotos/bau-recompensa.png" alt=""><small>Vazio</small></button>
+                    <button type="button" class="slot-bau-rpg" data-slot-bau="3"><img src="fotos/bau-recompensa.png" alt=""><small>Vazio</small></button>
                 </div>
                 <p id="mensagem-baus-inicio-rpg" class="mensagem-baus-inicio-rpg" aria-live="polite"></p>
             </section>
@@ -176,7 +176,7 @@
                 <div>
                     <span class="etiqueta-menu">CARTAS REPETIDAS</span>
                     <h3 id="titulo-troca-repetidas-rpg">Troque 3 cópias extras por uma carta nova</h3>
-                    <p>A cópia principal permanece na coleção. A nova carta será de uma era já alcançada.</p>
+                    <p>A cópia principal permanece na coleção. Você escolhe qual carta nova quer receber entre as eras já alcançadas.</p>
                 </div>
                 <div id="lista-trocas-rpg" class="lista-trocas-rpg"></div>
                 <p id="mensagem-troca-rpg" class="mensagem-troca-rpg" aria-live="polite"></p>
@@ -216,6 +216,13 @@
    <div id="painel-info">
         <h2 id="texto-turno">Aguardando Iniciativa...</h2>
         <p id="painel-narrador">O jogo vai começar!</p>
+        <details id="historico-narrador" aria-label="Histórico das ações da batalha">
+            <summary class="titulo-historico-narrador">
+                <span>Últimas ações</span>
+                <small id="quantidade-historico-narrador">0</small>
+            </summary>
+            <ol id="lista-historico-narrador"></ol>
+        </details>
     </div> <div id="area-dados">
         <button id="btn-rolar-dado" onclick="rolarDado()">Rolar Dado 🎲</button>
         <button id="btn-passar-vez" onclick="passarVezManual()">Passar a Vez ⏭️</button>
@@ -232,7 +239,7 @@
     </div>
 
 </div>
-    <script src="cartas.js"></script>
+    <script src="fotos/cartas.js"></script>
     <script src="habilidades.js"></script>
     <script src="main.js"></script>
     <script src="modo-inimigo.js"></script>

@@ -13,12 +13,14 @@
         { quantidade: 3, vida: 2, dano: 3, nome: "Pequeno" },
         { quantidade: 4, vida: 1, dano: 4, nome: "Mínimo" }
     ];
+    const LIMITE_ESQUELETOS = 5;
     let estado = null;
     let observadorCampo = null;
     let idPartida = 0;
     let proximaFamiliaSlime = 1;
     let proximoFragmentoSlime = 1;
     let familiasSlime = new Map();
+    let origensVisuaisDivisaoSlime = new Map();
     let proximaFamiliaEsqueleto = 1;
     let proximoEsqueleto = 1;
     let familiasEsqueleto = new Map();
@@ -32,7 +34,9 @@
     let proximoEcto = 1;
     let proximoFraguer = 1;
     let fundindoFraguers = false;
+    let fraguersVisuaisPorLado = { j1: new Set(), j2: new Set() };
     let proximoSpiritista = 1;
+    let origensAlmasSpiritista = new Map();
     let proximoSeteNegativo = 1;
     // Diferencia uma invocação (mão -> campo) de uma morte. Isso é importante
     // quando existem, ao mesmo tempo, um Ctrl copiando Esqueleto e outro
@@ -251,7 +255,7 @@
                 selo.className = "selo-grupo-esqueleto-rpg";
                 pacote.appendChild(selo);
             }
-            selo.textContent = `${vivos.length}/10`;
+            selo.textContent = `${vivos.length}/${LIMITE_ESQUELETOS}`;
             selo.setAttribute("aria-label", `${vivos.length} Esqueletos vivos neste grupo`);
         });
     }
@@ -301,6 +305,122 @@
         }
         selo.textContent = `${progresso.golpes}/2`;
         selo.setAttribute("aria-label", `${progresso.golpes} de 2 ataques no mesmo alvo para infectar`);
+    }
+
+    function criarMarcaPersistenteZumbi(pacote) {
+        if (!pacote || pacote.querySelector(":scope > .infeccao-visual-zumbi-rpg")) return;
+        let visual = document.createElement("span");
+        visual.className = "infeccao-visual-zumbi-rpg";
+        visual.setAttribute("aria-hidden", "true");
+        for (let indice = 0; indice < 3; indice++) visual.appendChild(document.createElement("i"));
+        pacote.appendChild(visual);
+    }
+
+    function sincronizarMarcasVisuaisZumbi() {
+        let marcados = new Set();
+        progressoZumbi.forEach((progresso, idZumbi) => {
+            if (!progresso || progresso.golpes !== 1 || !progresso.alvoId) return;
+            let zumbi = document.getElementById("pacote-" + idZumbi);
+            let alvo = document.getElementById("pacote-" + progresso.alvoId);
+            let silenciado = typeof window.rpgCartaSilenciadaPeloEcto === "function"
+                && window.rpgCartaSilenciadaPeloEcto(idZumbi);
+            if (zumbi && alvo && zumbi.closest("#campo-j1, #campo-j2") && !silenciado) {
+                marcados.add(progresso.alvoId);
+            }
+        });
+
+        document.querySelectorAll(".infectada-zumbi-rpg").forEach(pacote => {
+            let id = pacote.id.replace("pacote-", "");
+            if (marcados.has(id)) return;
+            pacote.classList.remove("infectada-zumbi-rpg");
+            pacote.querySelector(":scope > .infeccao-visual-zumbi-rpg")?.remove();
+        });
+        marcados.forEach(id => {
+            let pacote = document.getElementById("pacote-" + id);
+            if (!pacote) return;
+            pacote.classList.add("infectada-zumbi-rpg");
+            criarMarcaPersistenteZumbi(pacote);
+        });
+    }
+
+    function animarMordidaZumbi(pacoteAlvo) {
+        if (!pacoteAlvo) return;
+        pacoteAlvo.querySelector(":scope > .mordida-zumbi-rpg")?.remove();
+        let mordida = document.createElement("span");
+        mordida.className = "mordida-zumbi-rpg";
+        mordida.setAttribute("aria-hidden", "true");
+        for (let indice = 0; indice < 3; indice++) mordida.appendChild(document.createElement("i"));
+        pacoteAlvo.appendChild(mordida);
+        setTimeout(() => mordida.remove(), 850);
+    }
+
+    function prepararAnimacaoConversaoZumbi(idAlvo) {
+        let pacotePrincipal = document.getElementById("pacote-" + idAlvo);
+        if (!pacotePrincipal) return [];
+        let ids = pacotePrincipal.dataset.inimigoEspecial === "slime"
+            && typeof window.rpgObterIdsFamiliaSlime === "function"
+            ? window.rpgObterIdsFamiliaSlime(idAlvo)
+            : [idAlvo];
+
+        return ids.map(id => {
+            let pacote = document.getElementById("pacote-" + id);
+            if (!pacote) return null;
+            let retangulo = pacote.getBoundingClientRect();
+            let fantasma = pacote.cloneNode(true);
+            fantasma.removeAttribute("id");
+            fantasma.querySelectorAll("[id]").forEach(elemento => elemento.removeAttribute("id"));
+            fantasma.querySelectorAll("button").forEach(botao => botao.disabled = true);
+            fantasma.classList.remove("marca-infeccao-zumbi-rpg", "infectada-zumbi-rpg");
+            fantasma.classList.add("fantasma-conversao-zumbi-rpg");
+            fantasma.querySelectorAll(".mordida-zumbi-rpg, .infeccao-visual-zumbi-rpg").forEach(elemento => elemento.remove());
+            fantasma.setAttribute("aria-hidden", "true");
+            fantasma.style.left = retangulo.left + "px";
+            fantasma.style.top = retangulo.top + "px";
+            fantasma.style.width = retangulo.width + "px";
+            fantasma.style.height = retangulo.height + "px";
+            return { id, fantasma, origem: retangulo };
+        }).filter(Boolean);
+    }
+
+    function criarFumacaConversaoZumbi(retangulo) {
+        if (!retangulo) return;
+        let fumaca = document.createElement("span");
+        fumaca.className = "fumaca-conversao-zumbi-rpg";
+        fumaca.setAttribute("aria-hidden", "true");
+        fumaca.style.left = (retangulo.left + retangulo.width / 2) + "px";
+        fumaca.style.top = (retangulo.top + retangulo.height / 2) + "px";
+        for (let indice = 0; indice < 7; indice++) {
+            let particula = document.createElement("i");
+            particula.style.setProperty("--fumaca-zumbi-x", `${(indice - 3) * 13}px`);
+            particula.style.setProperty("--fumaca-zumbi-y", `${-18 - (indice % 3) * 12}px`);
+            particula.style.animationDelay = `${indice * 38}ms`;
+            fumaca.appendChild(particula);
+        }
+        document.body.appendChild(fumaca);
+        setTimeout(() => fumaca.remove(), 1050);
+    }
+
+    function finalizarAnimacaoConversaoZumbi(animacoes) {
+        (animacoes || []).forEach((animacao, indice) => {
+            let pacoteNovo = document.getElementById("pacote-" + animacao.id);
+            if (!pacoteNovo) return;
+            let destino = pacoteNovo.getBoundingClientRect();
+            animacao.fantasma.style.setProperty("--conversao-zumbi-x", (destino.left - animacao.origem.left) + "px");
+            animacao.fantasma.style.setProperty("--conversao-zumbi-y", (destino.top - animacao.origem.top) + "px");
+            animacao.fantasma.style.animationDelay = `${indice * 65}ms`;
+            document.body.appendChild(animacao.fantasma);
+
+            pacoteNovo.style.setProperty("--atraso-conversao-zumbi", `${indice * 65}ms`);
+            pacoteNovo.classList.add("chegada-conversao-zumbi-rpg");
+            setTimeout(() => criarFumacaConversaoZumbi(destino), 620 + indice * 65);
+            setTimeout(() => {
+                animacao.fantasma.remove();
+                if (pacoteNovo.isConnected) {
+                    pacoteNovo.classList.remove("chegada-conversao-zumbi-rpg");
+                    pacoteNovo.style.removeProperty("--atraso-conversao-zumbi");
+                }
+            }, 1250 + indice * 65);
+        });
     }
 
     function decorarPacoteZumbi(carta) {
@@ -395,6 +515,94 @@
         selo.setAttribute("aria-label", `${quantidade} Fraguers aliados em campo`);
     }
 
+    function pulsarEnergiaFraguer(pacote) {
+        if (!pacote?.isConnected) return;
+        pacote.classList.remove("pulso-energia-fraguer-rpg");
+        void pacote.offsetWidth;
+        pacote.classList.add("pulso-energia-fraguer-rpg");
+        setTimeout(() => pacote?.isConnected && pacote.classList.remove("pulso-energia-fraguer-rpg"), 820);
+    }
+
+    function definirIntensidadeFraguer(pacote, quantidade, silenciado) {
+        pacote.classList.remove(
+            "energia-fraguer-1-rpg", "energia-fraguer-2-rpg",
+            "energia-fraguer-3-rpg", "energia-fraguer-4-rpg"
+        );
+        pacote.classList.add(`energia-fraguer-${silenciado ? 1 : Math.max(1, Math.min(4, quantidade))}-rpg`);
+    }
+
+    function criarRaioEntreFraguers(origem, destino, atraso) {
+        if (!origem?.isConnected || !destino?.isConnected) return;
+        let rectOrigem = origem.getBoundingClientRect();
+        let rectDestino = destino.getBoundingClientRect();
+        let x1 = rectOrigem.left + rectOrigem.width / 2;
+        let y1 = rectOrigem.top + rectOrigem.height * .46;
+        let x2 = rectDestino.left + rectDestino.width / 2;
+        let y2 = rectDestino.top + rectDestino.height * .46;
+        let distancia = Math.hypot(x2 - x1, y2 - y1);
+        let angulo = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+
+        let raio = document.createElement("span");
+        raio.className = "raio-conexao-fraguer-rpg";
+        raio.setAttribute("aria-hidden", "true");
+        raio.style.left = `${x1}px`;
+        raio.style.top = `${y1}px`;
+        raio.style.width = `${distancia}px`;
+        raio.style.setProperty("--angulo-fraguer", `${angulo}deg`);
+        raio.style.setProperty("--atraso-fraguer", `${atraso}ms`);
+        document.body.appendChild(raio);
+        setTimeout(() => raio.remove(), 920 + atraso);
+    }
+
+    function animarChegadaFraguer(novos, todos) {
+        novos.forEach((novo, indiceNovo) => {
+            let aliados = todos.filter(pacote => pacote !== novo);
+            pulsarEnergiaFraguer(novo);
+            aliados.forEach((aliado, indiceAliado) => {
+                criarRaioEntreFraguers(novo, aliado, indiceAliado * 65 + indiceNovo * 40);
+                pulsarEnergiaFraguer(aliado);
+            });
+        });
+    }
+
+    function animarFusaoFraguers(participantes) {
+        if (!participantes.length) return;
+        let medidas = participantes.map(pacote => pacote.getBoundingClientRect());
+        let centroX = medidas.reduce((soma, rect) => soma + rect.left + rect.width / 2, 0) / medidas.length;
+        let centroY = medidas.reduce((soma, rect) => soma + rect.top + rect.height * .45, 0) / medidas.length;
+
+        let nucleo = document.createElement("span");
+        nucleo.className = "nucleo-fusao-fraguer-rpg";
+        nucleo.setAttribute("aria-hidden", "true");
+        nucleo.style.left = `${centroX}px`;
+        nucleo.style.top = `${centroY}px`;
+        document.body.appendChild(nucleo);
+        setTimeout(() => nucleo.remove(), 1250);
+
+        participantes.forEach((pacote, indice) => {
+            let rect = medidas[indice];
+            let inicioX = rect.left + rect.width / 2;
+            let inicioY = rect.top + rect.height * .45;
+            let sombra = document.createElement("span");
+            sombra.className = "sombra-fusao-fraguer-rpg";
+            sombra.setAttribute("aria-hidden", "true");
+            sombra.style.left = `${inicioX}px`;
+            sombra.style.top = `${inicioY}px`;
+            sombra.style.setProperty("--fusao-fraguer-x", `${centroX - inicioX}px`);
+            sombra.style.setProperty("--fusao-fraguer-y", `${centroY - inicioY}px`);
+            sombra.style.setProperty("--fusao-fraguer-giro", `${indice % 2 === 0 ? -22 : 22}deg`);
+            let imagemOriginal = pacote.querySelector("img");
+            if (imagemOriginal?.src) {
+                let imagem = document.createElement("img");
+                imagem.src = imagemOriginal.src;
+                imagem.alt = "";
+                sombra.appendChild(imagem);
+            }
+            document.body.appendChild(sombra);
+            setTimeout(() => sombra.remove(), 980);
+        });
+    }
+
     function fundirFraguers(lado, fraguers) {
         if (fundindoFraguers || fraguers.length < 4) return false;
         let participantes = fraguers.slice(0, 4);
@@ -409,6 +617,7 @@
         let campo = document.getElementById("campo-" + lado);
         if (!campo) return false;
         fundindoFraguers = true;
+        animarFusaoFraguers(participantes);
         let carta = criarCartaFraguer(true);
         let ehAliado = lado === "j1";
         let ancora = participantes[0];
@@ -435,6 +644,9 @@
             if (!campo) return;
             let fraguers = Array.from(campo.querySelectorAll(":scope > [data-inimigo-especial='fraguer']"));
             let quantidade = fraguers.length;
+            let idsAtuais = new Set(fraguers.map(pacote => pacote.id));
+            let idsAnteriores = fraguersVisuaisPorLado[lado] || new Set();
+            let novos = fraguers.filter(pacote => !idsAnteriores.has(pacote.id));
             fraguers.forEach(pacote => {
                 let id = pacote.id.replace("pacote-", "");
                 let danoEl = document.getElementById("dano-" + id);
@@ -448,8 +660,11 @@
                     if (novoBonus < bonusAnterior && typeof mostrarEfeitoPerdaAtaque === "function") mostrarEfeitoPerdaAtaque(id);
                 }
                 pacote.dataset.fraguerBonus = String(novoBonus);
+                definirIntensidadeFraguer(pacote, quantidade, silenciado);
                 atualizarSeloFraguer(pacote, quantidade);
             });
+            if (novos.length) animarChegadaFraguer(novos, fraguers);
+            fraguersVisuaisPorLado[lado] = idsAtuais;
             if (quantidade >= 4) fundirFraguers(lado, fraguers);
         });
     }
@@ -617,6 +832,7 @@
         }
 
         delete pacote.dataset.inimigoEspecial;
+        sincronizarMarcasVisuaisZumbi();
         sincronizarFraguers();
         atualizarPainel();
         return true;
@@ -697,7 +913,79 @@
         return lado === "j1" ? pacote.closest("#campo-j1") !== null : pacote.closest("#campo-j2") !== null;
     }
 
-    function roubarDanoSeteNegativo(idSete, idPacoteAlvo, narrarResultado = true, danoDisponivelNoInicio = null) {
+    function animarRouboSeteNegativo(pacoteSete, pacoteAlvo, roubou, indice, retanguloAlvoSalvo) {
+        if (!pacoteSete?.isConnected) return;
+        let origem = pacoteSete.getBoundingClientRect();
+        let destino = pacoteAlvo?.isConnected ? pacoteAlvo.getBoundingClientRect() : retanguloAlvoSalvo;
+        if (!destino) {
+            let campoOposto = pacoteSete.closest("#campo-j1")
+                ? document.getElementById("campo-j2")
+                : document.getElementById("campo-j1");
+            destino = campoOposto?.getBoundingClientRect() || origem;
+        }
+
+        let atraso = Math.min(Math.max(0, Number(indice) || 0) * 85, 255);
+        let inicioX = origem.left + origem.width / 2;
+        let inicioY = origem.top + origem.height * .42;
+        let fimX = destino.left + destino.width / 2;
+        let fimY = destino.top + destino.height * .44;
+        let meioX = (inicioX + fimX) / 2;
+        let meioY = Math.min(inicioY, fimY) - 42;
+
+        pacoteSete.classList.remove("sete-negativo-investida-rpg");
+        void pacoteSete.offsetWidth;
+        pacoteSete.classList.add("sete-negativo-investida-rpg");
+        let sombra = document.createElement("span");
+        sombra.className = "sombra-investida-sete-negativo-rpg";
+        sombra.setAttribute("aria-hidden", "true");
+        sombra.innerHTML = "<b>7</b><i></i><i></i><i></i>";
+        sombra.style.setProperty("--sete-inicio-x", `${inicioX}px`);
+        sombra.style.setProperty("--sete-inicio-y", `${inicioY}px`);
+        sombra.style.setProperty("--sete-meio-x", `${meioX}px`);
+        sombra.style.setProperty("--sete-meio-y", `${meioY}px`);
+        sombra.style.setProperty("--sete-fim-x", `${fimX}px`);
+        sombra.style.setProperty("--sete-fim-y", `${fimY}px`);
+        sombra.style.animationDelay = `${atraso}ms`;
+        document.body.appendChild(sombra);
+
+        setTimeout(() => {
+            if (pacoteAlvo?.isConnected) {
+                pacoteAlvo.classList.remove("impacto-roubo-sete-negativo-rpg");
+                void pacoteAlvo.offsetWidth;
+                pacoteAlvo.classList.add("impacto-roubo-sete-negativo-rpg");
+                setTimeout(() => pacoteAlvo?.isConnected && pacoteAlvo.classList.remove("impacto-roubo-sete-negativo-rpg"), 650);
+            }
+
+            let retorno = document.createElement("span");
+            retorno.className = roubou ? "espada-roubada-sete-negativo-rpg" : "retorno-vazio-sete-negativo-rpg";
+            retorno.setAttribute("aria-hidden", "true");
+            if (roubou) retorno.textContent = "🗡️";
+            else retorno.innerHTML = "<b>7</b>";
+            retorno.style.setProperty("--sete-retorno-inicio-x", `${fimX}px`);
+            retorno.style.setProperty("--sete-retorno-inicio-y", `${fimY}px`);
+            retorno.style.setProperty("--sete-retorno-meio-x", `${meioX}px`);
+            retorno.style.setProperty("--sete-retorno-meio-y", `${meioY}px`);
+            retorno.style.setProperty("--sete-retorno-fim-x", `${inicioX}px`);
+            retorno.style.setProperty("--sete-retorno-fim-y", `${inicioY}px`);
+            document.body.appendChild(retorno);
+            setTimeout(() => retorno.remove(), 760);
+        }, 455 + atraso);
+
+        setTimeout(() => {
+            sombra.remove();
+            if (!pacoteSete.isConnected) return;
+            pacoteSete.classList.remove("sete-negativo-investida-rpg");
+            if (!roubou) return;
+            pacoteSete.classList.remove("sete-negativo-roubando-rpg");
+            void pacoteSete.offsetWidth;
+            pacoteSete.classList.add("sete-negativo-roubando-rpg");
+            let idSete = pacoteSete.id.replace("pacote-", "");
+            if (typeof mostrarEfeitoAtaque === "function") mostrarEfeitoAtaque(idSete);
+            setTimeout(() => pacoteSete.isConnected && pacoteSete.classList.remove("sete-negativo-roubando-rpg"), 800);
+        }, 1030 + atraso);
+    }
+
+    function roubarDanoSeteNegativo(idSete, idPacoteAlvo, narrarResultado = true, danoDisponivelNoInicio = null, indiceVisual = 0, retanguloAlvoSalvo = null) {
         let pacoteSete = document.getElementById("pacote-" + idSete);
         let idAlvo = String(idPacoteAlvo || "").replace("pacote-", "");
         let pacoteAlvo = document.getElementById("pacote-" + idAlvo);
@@ -713,6 +1001,7 @@
             : Math.max(0, Number(danoDisponivelNoInicio) || 0);
         let quantidade = Math.min(1, referenciaRoubo);
         if (quantidade <= 0) {
+            animarRouboSeteNegativo(pacoteSete, pacoteAlvo, false, indiceVisual, retanguloAlvoSalvo);
             if (narrarResultado) narrar("➖ O 7 Negativo atacou, mas o alvo não tinha dano para ser roubado.");
             return 0;
         }
@@ -720,26 +1009,52 @@
         if (danoAlvo) danoAlvo.innerText = Math.max(0, atualAlvo - quantidade);
         danoSete.innerText = (parseFloat(danoSete.innerText) || 0) + quantidade;
         if (danoAlvo && typeof mostrarEfeitoPerdaAtaque === "function") mostrarEfeitoPerdaAtaque(idAlvo);
-        if (typeof mostrarEfeitoAtaque === "function") mostrarEfeitoAtaque(idSete);
-        pacoteSete.classList.remove("sete-negativo-roubando-rpg");
-        if (pacoteAlvo) pacoteAlvo.classList.remove("alvo-roubo-sete-negativo-rpg");
-        void pacoteSete.offsetWidth;
-        pacoteSete.classList.add("sete-negativo-roubando-rpg");
-        if (pacoteAlvo) pacoteAlvo.classList.add("alvo-roubo-sete-negativo-rpg");
-        setTimeout(() => {
-            pacoteSete.isConnected && pacoteSete.classList.remove("sete-negativo-roubando-rpg");
-            pacoteAlvo?.isConnected && pacoteAlvo.classList.remove("alvo-roubo-sete-negativo-rpg");
-        }, 800);
+        animarRouboSeteNegativo(pacoteSete, pacoteAlvo, true, indiceVisual, retanguloAlvoSalvo);
         if (typeof atualizarTodosUnidoes === "function") atualizarTodosUnidoes();
         if (typeof window.rpgSincronizarFraguers === "function") window.rpgSincronizarFraguers();
         if (narrarResultado) narrar(`➖ O 7 Negativo roubou ${quantidade} de dano do alvo e adicionou ao próprio ataque!`);
         return quantidade;
     }
 
+    function prepararAlmaSpiritista(idCartaMorta, pacoteCarta) {
+        if (!idCartaMorta || !pacoteCarta?.isConnected) return false;
+        let rect = pacoteCarta.getBoundingClientRect();
+        origensAlmasSpiritista.set(String(idCartaMorta), {
+            x: rect.left + rect.width / 2,
+            y: rect.top + rect.height * .42
+        });
+        return true;
+    }
+
+    function animarAlmaParaSpiritista(origem, pacoteSpiritista, indice) {
+        if (!origem || !pacoteSpiritista?.isConnected) return;
+        let destino = pacoteSpiritista.getBoundingClientRect();
+        let destinoX = destino.left + destino.width / 2;
+        let destinoY = destino.top + destino.height * .4;
+        let deslocamentoX = destinoX - origem.x;
+        let deslocamentoY = destinoY - origem.y;
+
+        let alma = document.createElement("span");
+        alma.className = "alma-voando-spiritista-rpg";
+        alma.setAttribute("aria-hidden", "true");
+        alma.style.left = `${origem.x}px`;
+        alma.style.top = `${origem.y}px`;
+        alma.style.setProperty("--alma-spiritista-x", `${deslocamentoX}px`);
+        alma.style.setProperty("--alma-spiritista-y", `${deslocamentoY}px`);
+        alma.style.setProperty("--alma-spiritista-meio-x", `${deslocamentoX * .52}px`);
+        alma.style.setProperty("--alma-spiritista-meio-y", `${deslocamentoY * .52 - 32 - indice * 7}px`);
+        alma.style.setProperty("--alma-spiritista-atraso", `${indice * 70}ms`);
+        for (let parte = 0; parte < 3; parte++) alma.appendChild(document.createElement("i"));
+        document.body.appendChild(alma);
+        setTimeout(() => alma.remove(), 1100 + indice * 70);
+    }
+
     // É chamado somente pelo fluxo central de morte em campo. Como o pacote
     // destruído já saiu do DOM, um Spiritista que morreu não ganha o próprio bônus.
-    function notificarMorteAosSpiritistas(nomeCartaMorta) {
+    function notificarMorteAosSpiritistas(nomeCartaMorta, idCartaMorta) {
         let fortalecidos = [];
+        let origem = origensAlmasSpiritista.get(String(idCartaMorta || ""));
+        origensAlmasSpiritista.delete(String(idCartaMorta || ""));
         ["j1", "j2"].forEach(lado => {
             let campo = document.getElementById("campo-" + lado);
             if (!campo) return;
@@ -749,11 +1064,16 @@
                 let dano = document.getElementById("dano-" + id);
                 if (!dano) return;
                 dano.innerText = (parseFloat(dano.innerText) || 0) + 1;
-                pacote.classList.remove("spiritista-absorvendo-alma-rpg");
-                void pacote.offsetWidth;
-                pacote.classList.add("spiritista-absorvendo-alma-rpg");
-                setTimeout(() => pacote.isConnected && pacote.classList.remove("spiritista-absorvendo-alma-rpg"), 850);
-                if (typeof mostrarEfeitoAtaque === "function") mostrarEfeitoAtaque(id);
+                let indice = fortalecidos.length;
+                animarAlmaParaSpiritista(origem, pacote, indice);
+                setTimeout(() => {
+                    if (!pacote.isConnected) return;
+                    pacote.classList.remove("spiritista-absorvendo-alma-rpg");
+                    void pacote.offsetWidth;
+                    pacote.classList.add("spiritista-absorvendo-alma-rpg");
+                    if (typeof mostrarEfeitoAtaque === "function") mostrarEfeitoAtaque(id);
+                    setTimeout(() => pacote.isConnected && pacote.classList.remove("spiritista-absorvendo-alma-rpg"), 850);
+                }, origem ? 660 + indice * 70 : 0);
                 fortalecidos.push(id);
             });
         });
@@ -839,11 +1159,50 @@
         }, 900);
     }
 
+    function animarNascimentoNovoEsqueleto(pacote) {
+        if (!pacote) return;
+        let retangulo = pacote.getBoundingClientRect();
+        let montagem = document.createElement("span");
+        montagem.className = "montagem-nascimento-esqueleto-rpg";
+        montagem.setAttribute("aria-hidden", "true");
+        montagem.style.left = (retangulo.left + retangulo.width / 2) + "px";
+        montagem.style.top = (retangulo.top + retangulo.height * .58) + "px";
+
+        let terra = document.createElement("b");
+        terra.className = "terra-abrindo-esqueleto-rpg";
+        montagem.appendChild(terra);
+
+        let partes = [
+            { simbolo: "💀", tipo: "cranio", inicioX: -38, inicioY: 63, fimX: 0, fimY: -34, rotacao: 0 },
+            { simbolo: "🦴", tipo: "tronco", inicioX: 31, inicioY: 72, fimX: 0, fimY: -3, rotacao: 90 },
+            { simbolo: "🦴", tipo: "osso", inicioX: -47, inicioY: 70, fimX: -17, fimY: -7, rotacao: -42 },
+            { simbolo: "🦴", tipo: "osso", inicioX: 45, inicioY: 66, fimX: 17, fimY: -7, rotacao: 42 },
+            { simbolo: "🦴", tipo: "osso", inicioX: -25, inicioY: 79, fimX: -9, fimY: 23, rotacao: -18 },
+            { simbolo: "🦴", tipo: "osso", inicioX: 22, inicioY: 82, fimX: 9, fimY: 23, rotacao: 18 }
+        ];
+
+        partes.forEach((parte, indice) => {
+            let elemento = document.createElement("i");
+            elemento.className = `parte-esqueleto-rpg parte-${parte.tipo}-esqueleto-rpg`;
+            elemento.textContent = parte.simbolo;
+            elemento.style.setProperty("--parte-inicio-x", `${parte.inicioX}px`);
+            elemento.style.setProperty("--parte-inicio-y", `${parte.inicioY}px`);
+            elemento.style.setProperty("--parte-fim-x", `${parte.fimX}px`);
+            elemento.style.setProperty("--parte-fim-y", `${parte.fimY}px`);
+            elemento.style.setProperty("--parte-rotacao", `${parte.rotacao}deg`);
+            elemento.style.animationDelay = `${indice * 48}ms`;
+            montagem.appendChild(elemento);
+        });
+
+        document.body.appendChild(montagem);
+        setTimeout(() => montagem.remove(), 1450);
+    }
+
     function invocarNovoEsqueleto(familiaId) {
         let familia = familiasEsqueleto.get(familiaId);
         if (!familia) return null;
         let membros = membrosEsqueletoNoCampo(familiaId);
-        if (membros.length === 0 || membros.length >= 10) return null;
+        if (membros.length === 0 || membros.length >= LIMITE_ESQUELETOS) return null;
 
         let campo = document.getElementById("campo-" + familia.lado);
         if (!campo) return null;
@@ -860,10 +1219,13 @@
         decorarPacoteEsqueleto(carta);
 
         let pacote = document.getElementById("pacote-" + carta.idUnico);
-        if (pacote) pacote.classList.add("nascimento-esqueleto-rpg");
+        if (pacote) {
+            pacote.classList.add("nascimento-esqueleto-rpg");
+            animarNascimentoNovoEsqueleto(pacote);
+        }
         setTimeout(() => {
             if (pacote && pacote.isConnected) pacote.classList.remove("nascimento-esqueleto-rpg");
-        }, 950);
+        }, 1350);
         narrar(`💀 A tropa cresceu! Agora ${membros.length + 1} Esqueletos atacarão juntos.`);
         atualizarPainel();
         return pacote;
@@ -1027,6 +1389,50 @@
         return ids.length;
     }
 
+    // Guarda a posição de cada Slime pouco antes da remoção. Quando dano em área
+    // ou fogo elimina o grupo inteiro no mesmo ciclo, o MutationObserver só
+    // atualiza a família depois de todas as remoções; por isso a decisão de
+    // animar é tomada mais tarde, usando a última origem que foi registrada.
+    function prepararAnimacaoDivisaoSlime(idUnico) {
+        let pacote = document.getElementById("pacote-" + idUnico);
+        if (!pacote || pacote.dataset.inimigoEspecial !== "slime") return false;
+
+        let familiaId = Number(pacote.dataset.slimeFamilia);
+        let familia = familiasSlime.get(familiaId);
+        if (!familia || familia.dividindo || !familia.vivos.has(idUnico)) return false;
+        if (familia.estagio + 1 >= ESTAGIOS_SLIME.length) return false;
+        if (typeof window.rpgCartaSilenciadaPeloEcto === "function"
+            && window.rpgCartaSilenciadaPeloEcto(idUnico)) return false;
+
+        let retangulo = pacote.getBoundingClientRect();
+        let fantasma = pacote.cloneNode(true);
+        fantasma.removeAttribute("id");
+        fantasma.querySelectorAll("[id]").forEach(elemento => elemento.removeAttribute("id"));
+        fantasma.querySelectorAll("button").forEach(botao => botao.disabled = true);
+        fantasma.classList.remove("nascimento-slime-rpg");
+        fantasma.classList.add("divisao-slime-origem-rpg");
+        fantasma.setAttribute("aria-hidden", "true");
+        fantasma.style.left = retangulo.left + "px";
+        fantasma.style.top = retangulo.top + "px";
+        fantasma.style.width = retangulo.width + "px";
+        fantasma.style.height = retangulo.height + "px";
+
+        origensVisuaisDivisaoSlime.set(familiaId, {
+            x: retangulo.left + retangulo.width / 2,
+            y: retangulo.top + retangulo.height / 2,
+            fantasma
+        });
+        return true;
+    }
+
+    function iniciarAnimacaoOrigemDivisaoSlime(familiaId) {
+        let origem = origensVisuaisDivisaoSlime.get(familiaId);
+        if (!origem || !origem.fantasma) return false;
+        document.body.appendChild(origem.fantasma);
+        setTimeout(() => origem.fantasma.remove(), 900);
+        return true;
+    }
+
     function invocarProximaFaseSlime(familiaId, estagio) {
         let atributos = ESTAGIOS_SLIME[estagio];
         let familia = familiasSlime.get(familiaId);
@@ -1039,23 +1445,43 @@
         familia.dividindo = true;
         if (estado) estado.implantando = true;
 
+        let origemVisual = origensVisuaisDivisaoSlime.get(familiaId);
         for (let fragmento = 1; fragmento <= atributos.quantidade; fragmento++) {
             let carta = criarCartaSlime(familiaId, estagio, proximoFragmentoSlime++);
             carta.ladoSlime = familia.lado;
             carta.contaComoCartaDaOnda = familia.contaComoCartaDaOnda;
             let ehAliado = familia.lado === "j1";
             let funcaoJogar = ehAliado ? "jogarCarta" : "jogarCartaInimigo";
-            let classe = ehAliado ? "carta-aliada nascimento-slime-rpg" : "carta-inimiga nascimento-slime-rpg";
+            let classe = ehAliado ? "carta-aliada" : "carta-inimiga";
             campo.insertAdjacentHTML("beforeend", criarHTMLCarta(carta, funcaoJogar, classe, ehAliado));
             if (ehAliado) jogarCarta("pacote-" + carta.idUnico, true);
             else jogarCartaInimigo("pacote-" + carta.idUnico, true);
             decorarPacoteInimigoEspecial(carta);
             let pacote = document.getElementById("pacote-" + carta.idUnico);
             if (pacote) {
-                pacote.classList.add("nascimento-slime-rpg");
                 pacote.style.setProperty("--atraso-slime", `${(fragmento - 1) * 100}ms`);
+                if (origemVisual) {
+                    let destino = pacote.getBoundingClientRect();
+                    pacote.style.setProperty("--origem-slime-x", `${origemVisual.x - (destino.left + destino.width / 2)}px`);
+                    pacote.style.setProperty("--origem-slime-y", `${origemVisual.y - (destino.top + destino.height / 2)}px`);
+                }
+                void pacote.offsetWidth;
+                pacote.classList.add("nascimento-slime-rpg");
+                setTimeout(() => {
+                    if (!pacote.isConnected) return;
+                    pacote.classList.remove("nascimento-slime-rpg");
+                    pacote.style.removeProperty("--atraso-slime");
+                    pacote.style.removeProperty("--origem-slime-x");
+                    pacote.style.removeProperty("--origem-slime-y");
+                }, 1450 + (fragmento - 1) * 100);
             }
         }
+
+        setTimeout(() => {
+            if (origensVisuaisDivisaoSlime.get(familiaId) === origemVisual) {
+                origensVisuaisDivisaoSlime.delete(familiaId);
+            }
+        }, 1600);
 
         familia.dividindo = false;
         if (estado) estado.implantando = false;
@@ -1101,6 +1527,7 @@
             if (familiasSilenciadas.has(familiaId)) {
                 let ladoDaFamilia = familia.lado;
                 familiasSlime.delete(familiaId);
+                origensVisuaisDivisaoSlime.delete(familiaId);
                 if (typeof registrarMorte === "function") {
                     registrarMorte("Slime", ladoDaFamilia, { familiaSlimeCompleta: true });
                 }
@@ -1109,10 +1536,12 @@
             }
             let proximoEstagio = familia.estagio + 1;
             if (proximoEstagio < ESTAGIOS_SLIME.length) {
+                iniciarAnimacaoOrigemDivisaoSlime(familiaId);
                 invocarProximaFaseSlime(familiaId, proximoEstagio);
             } else {
                 let ladoDaFamilia = familia.lado;
                 familiasSlime.delete(familiaId);
+                origensVisuaisDivisaoSlime.delete(familiaId);
                 if (typeof registrarMorte === "function") {
                     registrarMorte("Slime", ladoDaFamilia, { familiaSlimeCompleta: true });
                 }
@@ -1378,8 +1807,10 @@
 
         idPartida += 1;
         familiasSlime = new Map();
+        origensVisuaisDivisaoSlime = new Map();
         familiasEsqueleto = new Map();
         progressoZumbi = new Map();
+        sincronizarMarcasVisuaisZumbi();
         alvosAicer = new Map();
         crescimentosPendentesEsqueleto = new Map();
         movimentacoesEsqueletoSemMorte = new Set();
@@ -1391,7 +1822,9 @@
         proximoEcto = 1;
         proximoFraguer = 1;
         fundindoFraguers = false;
+        fraguersVisuaisPorLado = { j1: new Set(), j2: new Set() };
         proximoSpiritista = 1;
+        origensAlmasSpiritista = new Map();
         proximoSeteNegativo = 1;
         ataqueEsqueletoPendente = null;
         if (timerCrescimentoEsqueleto !== null) clearTimeout(timerCrescimentoEsqueleto);
@@ -1425,6 +1858,7 @@
         observadorCampo = new MutationObserver(mutacoes => {
             processarMortesSlime(mutacoes);
             processarMortesEsqueleto(mutacoes);
+            sincronizarMarcasVisuaisZumbi();
             sincronizarFraguers();
             marcarProximaOndaSeNecessario();
             // A última morte pode ocorrer depois que o turno já virou para o
@@ -1470,6 +1904,7 @@
         if (!pacoteAlvo) {
             progressoZumbi.set(idZumbi, { alvoId: null, golpes: 0 });
             atualizarSeloZumbi(idZumbi);
+            sincronizarMarcasVisuaisZumbi();
             return false;
         }
 
@@ -1477,6 +1912,8 @@
         else progresso = { alvoId: idAlvo, golpes: 1 };
         progressoZumbi.set(idZumbi, progresso);
         atualizarSeloZumbi(idZumbi);
+        animarMordidaZumbi(pacoteAlvo);
+        sincronizarMarcasVisuaisZumbi();
 
         pacoteAlvo.classList.remove("marca-infeccao-zumbi-rpg");
         void pacoteAlvo.offsetWidth;
@@ -1488,13 +1925,16 @@
             return true;
         }
 
+        let animacoesConversao = prepararAnimacaoConversaoZumbi(idAlvo);
         progressoZumbi.set(idZumbi, { alvoId: null, golpes: 0 });
         atualizarSeloZumbi(idZumbi);
+        sincronizarMarcasVisuaisZumbi();
         let novoDonoEhJ1 = ladoZumbi === "j1";
         let conversao = typeof window.rpgConverterVitimaZumbi === "function"
             ? window.rpgConverterVitimaZumbi(idAlvo, novoDonoEhJ1)
             : null;
         if (conversao) {
+            finalizarAnimacaoConversaoZumbi(animacoesConversao);
             narrar(`🧟 INFECÇÃO COMPLETA! ${conversao.nome} agora luta no lado do Zumbi com metade da vida original.`);
         }
         return !!conversao;
@@ -1509,10 +1949,85 @@
             : pacote.closest("#campo-j2") !== null;
     }
 
+    function animarFragmentosAtaqueAicer(idAicer, pacoteAlvo) {
+        let pacoteAicer = document.getElementById("pacote-" + idAicer);
+        if (!pacoteAicer || !pacoteAlvo?.isConnected) return;
+
+        let origem = pacoteAicer.getBoundingClientRect();
+        let destino = pacoteAlvo.getBoundingClientRect();
+        let inicioX = origem.left + origem.width / 2;
+        let inicioY = origem.top + origem.height * .42;
+        let fimX = destino.left + destino.width / 2;
+        let fimY = destino.top + destino.height * .42;
+
+        pacoteAicer.classList.remove("aicer-lancando-gelo-rpg");
+        void pacoteAicer.offsetWidth;
+        pacoteAicer.classList.add("aicer-lancando-gelo-rpg");
+        pacoteAlvo.classList.remove("impacto-fragmentos-aicer-rpg");
+        void pacoteAlvo.offsetWidth;
+
+        [-16, 0, 16].forEach((desvio, indice) => {
+            let fragmento = document.createElement("span");
+            fragmento.className = "fragmento-ataque-aicer-rpg";
+            fragmento.style.left = `${inicioX}px`;
+            fragmento.style.top = `${inicioY}px`;
+            fragmento.style.setProperty("--aicer-gelo-x", `${fimX - inicioX + desvio}px`);
+            fragmento.style.setProperty("--aicer-gelo-y", `${fimY - inicioY + desvio * .22}px`);
+            fragmento.style.setProperty("--aicer-gelo-meio-x", `${(fimX - inicioX + desvio) * .52}px`);
+            fragmento.style.setProperty("--aicer-gelo-meio-y", `${(fimY - inicioY + desvio * .22) * .52}px`);
+            fragmento.style.setProperty("--aicer-gelo-curva", `${(indice - 1) * 12}px`);
+            fragmento.style.setProperty("--aicer-gelo-atraso", `${indice * 55}ms`);
+            document.body.appendChild(fragmento);
+            setTimeout(() => fragmento.remove(), 950);
+        });
+
+        setTimeout(() => {
+            if (!pacoteAlvo.isConnected) return;
+            pacoteAlvo.classList.add("impacto-fragmentos-aicer-rpg");
+            setTimeout(() => pacoteAlvo?.isConnected && pacoteAlvo.classList.remove("impacto-fragmentos-aicer-rpg"), 620);
+        }, 470);
+        setTimeout(() => pacoteAicer?.isConnected && pacoteAicer.classList.remove("aicer-lancando-gelo-rpg"), 720);
+    }
+
+    function animarCongelamentoAicer(pacoteAlvo) {
+        if (!pacoteAlvo?.isConnected) return;
+        pacoteAlvo.querySelector(".congelamento-aicer-rpg")?.remove();
+
+        let vemDoChao = Math.random() < .5;
+        let efeito = document.createElement("span");
+        efeito.className = `congelamento-aicer-rpg ${vemDoChao ? "origem-chao-aicer-rpg" : "origem-ceu-aicer-rpg"}`;
+        efeito.setAttribute("aria-hidden", "true");
+
+        let clarão = document.createElement("b");
+        efeito.appendChild(clarão);
+        for (let indice = 0; indice < 7; indice++) {
+            let fragmento = document.createElement("i");
+            let deslocamento = (indice - 3) * 5 + (Math.random() * 8 - 4);
+            let altura = 34 + Math.random() * 64;
+            fragmento.style.left = `${8 + indice * 14}%`;
+            fragmento.style.setProperty("--gelo-aicer-x", `${deslocamento}px`);
+            fragmento.style.setProperty("--gelo-aicer-y", `${vemDoChao ? -altura : altura}px`);
+            fragmento.style.setProperty("--gelo-aicer-rotacao", `${(vemDoChao ? 0 : 180) - 32 + Math.random() * 64}deg`);
+            fragmento.style.setProperty("--gelo-aicer-tamanho", `${.7 + Math.random() * .65}`);
+            fragmento.style.setProperty("--gelo-aicer-atraso", `${indice * 38}ms`);
+            efeito.appendChild(fragmento);
+        }
+
+        pacoteAlvo.appendChild(efeito);
+        pacoteAlvo.classList.add("congelamento-forte-aicer-rpg");
+        setTimeout(() => {
+            efeito.remove();
+            pacoteAlvo?.isConnected && pacoteAlvo.classList.remove("congelamento-forte-aicer-rpg");
+        }, 1250);
+    }
+
     function concluirAtaqueAicer(idAicer, idPacoteAlvo, ladoAicer) {
         if (!ehAicerAtivo(idAicer, ladoAicer)) return false;
         let idAlvo = String(idPacoteAlvo || "").replace("pacote-", "");
+        let pacoteAlvo = document.getElementById("pacote-" + idAlvo);
         let alvos = alvosAicer.get(idAicer) || [];
+
+        animarFragmentosAtaqueAicer(idAicer, pacoteAlvo);
 
         // Repetir o mesmo alvo não completa a Passiva: é preciso atingir duas
         // cartas diferentes. O selo deixa essa regra visível durante o teste.
@@ -1542,6 +2057,7 @@
         let pacoteParalisado = document.getElementById("pacote-" + idParalisado);
         let nomeParalisado = pacoteParalisado?.querySelector(".nome-carta")?.innerText?.trim() || "A carta";
         pacoteParalisado.classList.add("congelada", "paralisada-pelo-aicer-rpg");
+        animarCongelamentoAicer(pacoteParalisado);
         // Três passagens: a aplicação acontece depois da troca atual, bloqueia o
         // próximo turno do dono e termina antes do turno seguinte dele.
         duracaoGelo[idParalisado] = Math.max(Number(duracaoGelo[idParalisado]) || 0, 3);
@@ -1599,11 +2115,11 @@
                 let familia = familiasEsqueleto.get(familiaId);
                 if (!familia || membrosEsqueletoNoCampo(familiaId).length === 0) return;
                 for (let indice = 0; indice < quantidade; indice++) {
-                    if (membrosEsqueletoNoCampo(familiaId).length >= 10) break;
+                    if (membrosEsqueletoNoCampo(familiaId).length >= LIMITE_ESQUELETOS) break;
                     invocarNovoEsqueleto(familiaId);
                 }
-                if (membrosEsqueletoNoCampo(familiaId).length >= 10) {
-                    narrar("💀 Formação máxima! Os 10 Esqueletos atacarão juntos.");
+                if (membrosEsqueletoNoCampo(familiaId).length >= LIMITE_ESQUELETOS) {
+                    narrar(`💀 Formação máxima! Os ${LIMITE_ESQUELETOS} Esqueletos atacarão juntos.`);
                 }
             });
         }, 520);
@@ -1613,7 +2129,7 @@
         let dados = obterDadosEsqueleto(idUnico);
         if (!modoAtivo() || !dados || dados.familia.lado !== lado) return null;
         if (typeof window.rpgCartaSilenciadaPeloEcto === "function" && window.rpgCartaSilenciadaPeloEcto(idUnico)) return null;
-        let membros = membrosEsqueletoNoCampo(dados.familiaId).slice(0, 10);
+        let membros = membrosEsqueletoNoCampo(dados.familiaId).slice(0, LIMITE_ESQUELETOS);
         if (membros.length === 0) return null;
         return {
             familiaId: dados.familiaId,
@@ -1658,12 +2174,15 @@
         let danoAlvoAntesSete = ataqueSeteNegativo
             ? Math.max(0, parseFloat(document.getElementById("dano-" + String(idPacoteAlvo).replace("pacote-", ""))?.innerText) || 0)
             : 0;
+        let retanguloAlvoSete = ataqueSeteNegativo
+            ? document.getElementById(idPacoteAlvo)?.getBoundingClientRect()
+            : null;
         if (!modoAtivo() || !ataque) {
             let resultadoComum = aplicarDanoInimigoOriginal.apply(this, arguments);
             if (ataqueZumbi && !modoAtaqueInimigo) concluirAtaqueZumbi(idAtacante, idPacoteAlvo, "j2");
             if (ataqueAicer && !modoAtaqueInimigo) concluirAtaqueAicer(idAtacante, idPacoteAlvo, "j2");
             if (ataqueEcto && !modoAtaqueInimigo) concluirAtaqueEcto(idAtacante, idPacoteAlvo, "j2");
-            if (ataqueSeteNegativo && !modoAtaqueInimigo) roubarDanoSeteNegativo(idAtacante, idPacoteAlvo, true, danoAlvoAntesSete);
+            if (ataqueSeteNegativo && !modoAtaqueInimigo) roubarDanoSeteNegativo(idAtacante, idPacoteAlvo, true, danoAlvoAntesSete, 0, retanguloAlvoSete);
             return resultadoComum;
         }
 
@@ -1715,12 +2234,15 @@
         let danoAlvoAntesSete = ataqueSeteNegativo
             ? Math.max(0, parseFloat(document.getElementById("dano-" + String(idPacoteAlvo).replace("pacote-", ""))?.innerText) || 0)
             : 0;
+        let retanguloAlvoSete = ataqueSeteNegativo
+            ? document.getElementById(idPacoteAlvo)?.getBoundingClientRect()
+            : null;
         if (!modoAtivo() || !ataque || ataque.lado !== "j1") {
             let resultadoComum = receberAtaqueOriginal.apply(this, arguments);
             if (ataqueZumbi && !modoAtaque) concluirAtaqueZumbi(idAtacante, idPacoteAlvo, "j1");
             if (ataqueAicer && !modoAtaque) concluirAtaqueAicer(idAtacante, idPacoteAlvo, "j1");
             if (ataqueEcto && !modoAtaque) concluirAtaqueEcto(idAtacante, idPacoteAlvo, "j1");
-            if (ataqueSeteNegativo && !modoAtaque) roubarDanoSeteNegativo(idAtacante, idPacoteAlvo, true, danoAlvoAntesSete);
+            if (ataqueSeteNegativo && !modoAtaque) roubarDanoSeteNegativo(idAtacante, idPacoteAlvo, true, danoAlvoAntesSete, 0, retanguloAlvoSete);
             return resultadoComum;
         }
 
@@ -1777,6 +2299,7 @@
     window.rpgRegistrarFraguer = registrarFraguer;
     window.rpgSincronizarFraguers = sincronizarFraguers;
     window.rpgRegistrarSpiritista = registrarSpiritista;
+    window.rpgPrepararAlmaSpiritista = prepararAlmaSpiritista;
     window.rpgNotificarMorteAosSpiritistas = notificarMorteAosSpiritistas;
     window.rpgRegistrarSeteNegativo = registrarSeteNegativo;
     window.rpgRoubarDanoSeteNegativo = roubarDanoSeteNegativo;
@@ -1788,6 +2311,7 @@
     window.rpgObterIdsFamiliaSlime = obterIdsFamiliaSlime;
     window.rpgPrepararRouboFamiliaSlime = prepararRouboFamiliaSlime;
     window.rpgRegistrarFamiliaSlimeRoubada = registrarFamiliaSlimeRoubada;
+    window.rpgPrepararAnimacaoDivisaoSlime = prepararAnimacaoDivisaoSlime;
     window.rpgPrepararTransformacaoFamiliaSlime = prepararTransformacaoFamiliaSlime;
     window.rpgConcluirTransformacaoFamiliaSlime = concluirTransformacaoFamiliaSlime;
     window.rpgApagarFamiliaSlime = apagarFamiliaSlime;

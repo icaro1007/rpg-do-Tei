@@ -1,3 +1,14 @@
+// Todos os desenhos e este próprio arquivo ficam dentro de rpg-cards/fotos.
+// Os demais arquivos podem continuar usando somente o nome da imagem: este
+// resolvedor acrescenta a pasta uma única vez e preserva URLs já completas.
+window.RPG_PASTA_IMAGENS = "fotos/";
+window.caminhoImagemRpg = function (arquivo) {
+    let caminho = String(arquivo || "").replace(/\\/g, "/");
+    if (!caminho) return "";
+    if (/^(?:data:|blob:|https?:\/\/|\/|\.\/fotos\/|fotos\/)/i.test(caminho)) return caminho;
+    return window.RPG_PASTA_IMAGENS + caminho.replace(/^\.\//, "");
+};
+
 const bancoDeCartas = [
             // --- CARTAS DO LOTE 1 ---
             { id: "guerreiro", nome: "Guerreiro", vida: 5, dano: 1, img: "guerreiro.png", qtd: 4 },
@@ -39,8 +50,8 @@ const bancoDeCartas = [
             { id: "incendiario", nome: "Incendiário", vida: 4, dano: 2, img: "incendiário.png", qtd: 3 },
 
             // --- CARTAS DO LOTE 4 ---
-            { id: "vampi7", nome: "Vampi7", vida: 0, dano: 0, img: "vampi7.png", qtd: 2 },
-            { id: "portable", nome: "Portable", vida: 2, dano: 1, img: "Portable.png", qtd: 2 },
+            { id: "vampi7", nome: "Vampi7", vida: 0, dano: 0, img: "Vampi7.png", qtd: 2 },
+            { id: "portable", nome: "Portable", vida: 2, dano: 1, img: "portable.png", qtd: 2 },
             { id: "plus_life", nome: "Plus Life", vida: 0, dano: 0, img: "plus_life.png", qtd: 2 },
             { id: "reviverta", nome: "Reviverta", vida: 0, dano: 0, img: "reviverta.png", qtd: 2 },
             { id: "cracker", nome: "Cracker", vida: 0, dano: 0, img: "cracker.png", qtd: 2 },
@@ -50,3 +61,9 @@ const bancoDeCartas = [
             { id: "mago", nome: "Mago", vida: 3, dano: 2, img: "mago.png", qtd: 4 },
             { id: "triobarbaros", nome: "Trio de Bárbaros", vida: 9, dano: 3, img: "trio de barbaro.png", qtd: 2 }
         ];
+
+// Menu, loja, batalha e cópias passam a receber o endereço correto sem que
+// cada uso individual precise conhecer a organização das pastas.
+bancoDeCartas.forEach(carta => {
+    carta.img = window.caminhoImagemRpg(carta.img);
+});

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420" role="img" aria-labelledby="titulo descricao">
+  <title id="titulo">Ecto</title>
+  <desc id="descricao">Imagem provisória de um fantasma roxo que apaga habilidades.</desc>
+  <defs>
+    <linearGradient id="fundo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#24163f"/>
+      <stop offset="1" stop-color="#0c0818"/>
+    </linearGradient>
+    <linearGradient id="corpo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d9c8ff"/>
+      <stop offset="0.55" stop-color="#8d65d6"/>
+      <stop offset="1" stop-color="#4a277f"/>
+    </linearGradient>
+    <filter id="brilho" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="300" height="420" rx="20" fill="url(#fundo)"/>
+  <circle cx="150" cy="188" r="102" fill="#7650bd" opacity=".18" filter="url(#brilho)"/>
+  <path d="M76 270V175c0-67 33-108 74-108s74 41 74 108v95l-25-23-25 30-25-28-25 28-24-30z" fill="url(#corpo)" stroke="#efe8ff" stroke-width="7"/>
+  <ellipse cx="121" cy="172" rx="13" ry="20" fill="#130b25"/>
+  <ellipse cx="181" cy="172" rx="13" ry="20" fill="#130b25"/>
+  <path d="M121 218c18 13 39 13 59 0" fill="none" stroke="#2a1648" stroke-width="8" stroke-linecap="round"/>
+  <g fill="#cbb6ff" opacity=".75">
+    <circle cx="55" cy="124" r="7"/><circle cx="244" cy="155" r="10"/><circle cx="52" cy="250" r="11"/><circle cx="245" cy="272" r="6"/>
+  </g>
+  <rect x="34" y="326" width="232" height="60" rx="15" fill="#160d28" stroke="#9d7bdd" stroke-width="3"/>
+  <text x="150" y="365" text-anchor="middle" fill="#f7f2ff" font-size="32" font-family="Georgia, serif" font-weight="700">ECTO</text>
+</svg>

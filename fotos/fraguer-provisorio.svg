@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420" role="img" aria-labelledby="t d">
+  <title id="t">Fraguer</title><desc id="d">Imagem provisória do inimigo Fraguer.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#291626"/><stop offset="1" stop-color="#0f0912"/></linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ff9567"/><stop offset="1" stop-color="#8d263f"/></linearGradient>
+  </defs>
+  <rect width="300" height="420" rx="20" fill="url(#bg)"/>
+  <circle cx="150" cy="184" r="106" fill="#e84e61" opacity=".12"/>
+  <path d="M90 250l13-114 47-45 47 45 13 114-32 39h-56z" fill="url(#body)" stroke="#ffd0af" stroke-width="7"/>
+  <path d="M110 137L80 95l55 19M190 137l30-42-55 19" fill="#b9364f" stroke="#ffd0af" stroke-width="7" stroke-linejoin="round"/>
+  <circle cx="126" cy="176" r="12" fill="#fff0c8"/><circle cx="174" cy="176" r="12" fill="#fff0c8"/>
+  <circle cx="126" cy="176" r="5" fill="#2a101b"/><circle cx="174" cy="176" r="5" fill="#2a101b"/>
+  <path d="M122 221h56" stroke="#3c101e" stroke-width="10" stroke-linecap="round"/>
+  <path d="M76 278l48-20M224 278l-48-20" stroke="#ffb07a" stroke-width="13" stroke-linecap="round"/>
+  <rect x="32" y="326" width="236" height="61" rx="15" fill="#190c13" stroke="#ef6e72" stroke-width="3"/>
+  <text x="150" y="365" text-anchor="middle" fill="#fff4e3" font-size="31" font-family="Georgia,serif" font-weight="700">FRAGUER</text>
+</svg>

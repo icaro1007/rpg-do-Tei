@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="720" viewBox="0 0 520 720" role="img" aria-labelledby="titulo descricao">
+  <title id="titulo">Slime — imagem provisória</title>
+  <desc id="descricao">Cartão provisório verde para o inimigo Slime.</desc>
+  <rect width="520" height="720" fill="#062a32"/>
+  <rect x="18" y="18" width="484" height="684" rx="34" fill="#0d5949" stroke="#8dff9f" stroke-width="8"/>
+  <circle cx="260" cy="310" r="154" fill="#55e56c" opacity=".95"/>
+  <circle cx="205" cy="285" r="22" fill="#071b20"/>
+  <circle cx="315" cy="285" r="22" fill="#071b20"/>
+  <path d="M196 365 Q260 410 324 365" fill="none" stroke="#071b20" stroke-width="15" stroke-linecap="round"/>
+  <text x="260" y="548" text-anchor="middle" fill="#f4ffad" font-family="Arial, sans-serif" font-size="74" font-weight="700">SLIME</text>
+  <text x="260" y="610" text-anchor="middle" fill="#d9ffe0" font-family="Arial, sans-serif" font-size="25">IMAGEM PROVISÓRIA</text>
+</svg>

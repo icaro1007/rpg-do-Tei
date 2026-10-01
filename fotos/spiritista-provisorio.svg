@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 420" role="img" aria-labelledby="t d">
+  <title id="t">Spiritista</title><desc id="d">Imagem provisória do inimigo Spiritista.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#162746"/><stop offset="1" stop-color="#080d1c"/></linearGradient>
+    <linearGradient id="robe" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#6c8bc8"/><stop offset="1" stop-color="#27335e"/></linearGradient>
+    <filter id="g" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="300" height="420" rx="20" fill="url(#bg)"/>
+  <g fill="#7ce7ff" opacity=".55" filter="url(#g)"><circle cx="61" cy="128" r="12"/><circle cx="234" cy="115" r="9"/><circle cx="54" cy="245" r="8"/><circle cx="244" cy="260" r="13"/></g>
+  <path d="M76 291l25-151 49-47 49 47 25 151-44 22h-60z" fill="url(#robe)" stroke="#b8dcff" stroke-width="7"/>
+  <path d="M105 142c2-49 24-73 45-73s43 24 45 73c-21-18-69-18-90 0z" fill="#17203e" stroke="#9fcaff" stroke-width="6"/>
+  <ellipse cx="150" cy="168" rx="42" ry="48" fill="#d6edff"/>
+  <circle cx="132" cy="164" r="8" fill="#17203e"/><circle cx="168" cy="164" r="8" fill="#17203e"/>
+  <path d="M132 201c12 9 24 9 36 0" fill="none" stroke="#334569" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="150" cy="249" r="28" fill="#75eaff" opacity=".8" filter="url(#g)"/>
+  <path d="M150 228l8 15 17 3-12 12 3 17-16-8-16 8 3-17-12-12 17-3z" fill="#eefcff"/>
+  <rect x="28" y="326" width="244" height="61" rx="15" fill="#091225" stroke="#78cde8" stroke-width="3"/>
+  <text x="150" y="365" text-anchor="middle" fill="#eafaff" font-size="27" font-family="Georgia,serif" font-weight="700">SPIRITISTA</text>
+</svg>

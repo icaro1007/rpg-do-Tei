@@ -10,7 +10,12 @@ const RPG_PONTOS_DERROTA = 5;
 const RPG_LIMITE_PONTOS = 2026;
 const RPG_LIMITE_BAUS_DIA = 4;
 const RPG_CARTAS_INICIAIS = ["guerreiro", "barbaro", "mago", "escudo_item"];
-const RPG_COPIAS_EXTRAS_PARA_TROCA = 3;
+const RPG_COPIAS_EXTRAS_PARA_TROCA = 5;
+const RPG_TROCAS_MOEDAS = [
+    { quantidade: 15, moedas: 100 },
+    { quantidade: 25, moedas: 500 },
+    { quantidade: 40, moedas: 1000 }
+];
 // Temporário para os testes: todas as cartas entram no sorteio de qualquer
 // modo de batalha. A coleção, os pontos e os desbloqueios salvos não são alterados.
 const RPG_TESTE_TODAS_CARTAS_NAS_BATALHAS = true;
@@ -19,10 +24,10 @@ const RPG_TESTE_TODAS_CARTAS_NAS_BATALHAS = true;
 const RPG_PRECOS_LOJA = {
     cartaEraAtual: 90,
     cartaOutraEra: 130,
-    bauEraAtual: 220,
-    bauOutraEra: 340,
-    bauEraFutura: 460,
-    bauSupremo: 1600
+    bauEraAtual: 160,
+    bauOutraEra: 120,
+    bauEraFutura: 220,
+    bauSupremo: 320
 };
 
 const RPG_GRUPOS_VARIANTES = {
@@ -187,6 +192,12 @@ let rpgTimerVitoria = null;
 let rpgUltimoFocoCarta = null;
 let rpgBauAbrindo = false;
 let rpgTrocaPendente = null;
+let rpgCarrosselTrocasTimer = null;
+let rpgCarrosselTrocasFrame = null;
+let rpgCarrosselTrocasUltimoTempo = 0;
+let rpgCarrosselTrocasDeslocamento = 0;
+let rpgOfertasTrocaExibicao = [];
+let rpgIndiceOfertaTroca = 0;
 
 function dataLocalRpg() {
     let agora = new Date();
@@ -831,55 +842,64 @@ function hashRpg(texto) {
     return valor >>> 0;
 }
 
-function ofertasLojaRpg() {
+function precoBauLojaRpg(era, eraAtual) {
+    let distancia = indiceEraRpg(era) - indiceEraRpg(eraAtual);
+    if (distancia === 0) return RPG_PRECOS_LOJA.bauEraAtual;
+    if (distancia < 0) return Math.max(50, RPG_PRECOS_LOJA.bauEraAtual - 40);
+    return RPG_PRECOS_LOJA.bauEraAtual + 60;
+}
+
+function ofertasPresenteLojaRpg() {
+    return [{
+        id: "presente-diario",
+        tipo: "gratis",
+        etiqueta: "GRÁTIS UMA VEZ POR DIA",
+        titulo: "Presente diário",
+        descricao: "Pode trazer moedas ou um baú. O prêmio abre aqui mesmo.",
+        icone: "🎁",
+        preco: 0
+    }];
+}
+
+function ofertasCartasLojaRpg() {
     let data = dataLocalRpg();
-    let eraAtual = obterEraAtualRpg();
     let cartasPossuidas = cartasUnicasPorColecaoRpg(rpgCatalogo)
         .filter(carta => quantidadeCartaRpg(carta.id) > 0)
         .map(carta => ({ carta, ordem: hashRpg(data + ":carta:" + carta.id) }))
         .sort((a, b) => a.ordem - b.ordem);
-    let cartaDoDia = cartasPossuidas[0]?.carta || rpgCatalogo.find(carta => carta.id === "guerreiro");
-    let precoCarta = cartaDoDia.era === eraAtual
-        ? RPG_PRECOS_LOJA.cartaEraAtual
-        : RPG_PRECOS_LOJA.cartaOutraEra;
-
-    let ofertas = [
-        {
-            id: "presente-diario",
-            tipo: "gratis",
-            etiqueta: "GRÁTIS UMA VEZ POR DIA",
-            titulo: "Presente diário",
-            descricao: "Pode trazer moedas ou um baú.",
-            icone: "🎁",
-            preco: 0
-        },
-        {
-            id: `carta-${cartaDoDia.id}`,
+    let eraAtual = obterEraAtualRpg();
+    return Array.from({ length: 5 }, (_, indice) => {
+        let carta = cartasPossuidas[indice]?.carta;
+        if (!carta) {
+            return { id: `carta-vazia-${indice}`, tipo: "carta-vazia", titulo: "Espaço disponível", descricao: "Desbloqueie uma carta para preencher este slot.", preco: null };
+        }
+        let preco = carta.era === eraAtual ? RPG_PRECOS_LOJA.cartaEraAtual : RPG_PRECOS_LOJA.cartaOutraEra;
+        return {
+            id: `carta-${carta.id}`,
             tipo: "carta",
             etiqueta: "CARTA JÁ DESCOBERTA",
-            titulo: nomeCartaExibicaoRpg(cartaDoDia),
-            descricao: `Mais 1 cópia · na coleção: x${quantidadeCartaRpg(cartaDoDia.id)}`,
-            carta: cartaDoDia,
-            preco: precoCarta
-        }
-    ];
+            titulo: nomeCartaExibicaoRpg(carta),
+            descricao: `Mais 1 cópia · na coleção: x${quantidadeCartaRpg(carta.id)}`,
+            carta,
+            preco
+        };
+    });
+}
 
+function ofertasBausLojaRpg() {
+    let eraAtual = obterEraAtualRpg();
+    let ofertas = [];
     Object.keys(RPG_ERAS).forEach(era => {
         let distancia = indiceEraRpg(era) - indiceEraRpg(eraAtual);
-        let preco = distancia === 0
-            ? RPG_PRECOS_LOJA.bauEraAtual
-            : distancia > 0
-                ? RPG_PRECOS_LOJA.bauEraFutura
-                : RPG_PRECOS_LOJA.bauOutraEra;
         ofertas.push({
             id: `bau-${era}`,
             tipo: "bau-era",
             era,
             etiqueta: RPG_ERAS[era].nome,
             titulo: `Baú ${RPG_ERAS[era].nome.replace("Era ", "")}`,
-            descricao: distancia === 0 ? "Baú da sua era · preço reduzido" : "Pode trazer cartas desta era",
+            descricao: distancia === 0 ? "Baú da sua era · preço reduzido" : distancia < 0 ? "Baú da era anterior · preço menor" : "Baú da próxima era · preço maior",
             imagem: "fotos/bau-recompensa.png",
-            preco
+            preco: precoBauLojaRpg(era, eraAtual)
         });
     });
 
@@ -890,9 +910,17 @@ function ofertasLojaRpg() {
         titulo: "Baú Supremo",
         descricao: "Pode trazer qualquer carta ou uma grande quantidade de moedas.",
         imagem: "fotos/bau-recompensa.png",
-        preco: RPG_PRECOS_LOJA.bauSupremo
+        preco: RPG_PRECOS_LOJA.bauEraAtual * 2
     });
     return ofertas;
+}
+
+function ofertasLojaRpg() {
+    return {
+        presente: ofertasPresenteLojaRpg(),
+        cartas: ofertasCartasLojaRpg(),
+        baus: ofertasBausLojaRpg()
+    };
 }
 
 function registrarCompraLojaRpg(idOferta) {
@@ -923,8 +951,8 @@ function comprarOfertaLojaRpg(oferta) {
             rpgProgresso.moedas += moedas;
             textoResultado = `🎁 O presente trouxe ${moedas} moedas!`;
         } else {
-            rpgProgresso.baus++;
-            textoResultado = "🎁 O presente trouxe 1 baú! Ele foi colocado nos espaços da tela inicial.";
+            premioBau = concederPremioBauRpg();
+            textoResultado = `🎁 O presente trouxe um baú: ${textoPremioBauRpg(premioBau)}`;
         }
     } else {
         rpgProgresso.moedas -= oferta.preco;
@@ -954,32 +982,39 @@ function comprarOfertaLojaRpg(oferta) {
     }
 }
 
-function renderizarLojaRpg() {
-    let grade = document.getElementById("grade-loja-rpg");
+function renderizarOfertasLojaRpg(idGrade, ofertas) {
+    let grade = document.getElementById(idGrade);
     if (!grade) return;
     let data = dataLocalRpg();
     let comprasHoje = rpgProgresso.comprasLoja[data] || [];
     grade.innerHTML = "";
 
-    ofertasLojaRpg().forEach(ofertaLoja => {
+    ofertas.forEach(ofertaLoja => {
         let comprada = comprasHoje.includes(ofertaLoja.id);
         let oferta = document.createElement("article");
-        oferta.className = `oferta-loja-rpg oferta-${ofertaLoja.tipo}-rpg${ofertaLoja.era ? ` loja-era-${ofertaLoja.era}` : ""}${comprada ? " oferta-comprada-rpg" : ""}`;
+        let vazia = ofertaLoja.tipo === "carta-vazia";
+        oferta.className = `oferta-loja-rpg oferta-${ofertaLoja.tipo}-rpg${ofertaLoja.era ? ` loja-era-${ofertaLoja.era}` : ""}${comprada ? " oferta-comprada-rpg" : ""}${vazia ? " oferta-vazia-rpg" : ""}`;
         let visual = ofertaLoja.carta
             ? `<img src="${ofertaLoja.carta.img}" alt="Carta ${ofertaLoja.carta.nome}">`
             : ofertaLoja.imagem
                 ? `<img src="${ofertaLoja.imagem}" alt="">`
-                : `<span class="icone-oferta-loja-rpg" aria-hidden="true">${ofertaLoja.icone}</span>`;
+                : `<span class="icone-oferta-loja-rpg" aria-hidden="true">${ofertaLoja.icone || "🃏"}</span>`;
         oferta.innerHTML = `
-            <span class="era-oferta-rpg">${ofertaLoja.etiqueta}</span>
+            <span class="era-oferta-rpg">${ofertaLoja.etiqueta || "SLOT DE CARTA"}</span>
             ${visual}
             <h3>${ofertaLoja.titulo}</h3>
             <p>${ofertaLoja.descricao}</p>
-            <button type="button" ${comprada ? "disabled" : ""}>${comprada ? "Resgatado" : ofertaLoja.preco === 0 ? "Resgatar grátis" : `🪙 ${ofertaLoja.preco}`}</button>
+            <button type="button" ${comprada || vazia ? "disabled" : ""}>${vazia ? "Bloqueado" : comprada ? "Resgatado" : ofertaLoja.preco === 0 ? "Resgatar grátis" : `🪙 ${ofertaLoja.preco}`}</button>
         `;
-        oferta.querySelector("button").addEventListener("click", () => comprarOfertaLojaRpg(ofertaLoja));
+        if (!vazia) oferta.querySelector("button").addEventListener("click", () => comprarOfertaLojaRpg(ofertaLoja));
         grade.appendChild(oferta);
     });
+}
+
+function renderizarLojaRpg() {
+    let ofertas = ofertasLojaRpg();
+    renderizarOfertasLojaRpg("grade-cartas-loja-rpg", [...ofertas.presente, ...ofertas.cartas]);
+    renderizarOfertasLojaRpg("grade-baus-loja-rpg", ofertas.baus);
     renderizarTrocasRepetidasRpg();
 }
 
@@ -988,7 +1023,7 @@ function novasCartasParaTrocaRpg() {
         .filter(carta => quantidadeCartaRpg(carta.id) === 0);
 }
 
-function fecharEscolhaTrocaRpg() {
+function fecharEscolhaTrocaRpg({ retomar = true } = {}) {
     let modal = document.querySelector(".modal-troca-rpg");
     let focoAnterior = rpgTrocaPendente?.focoAnterior;
     if (modal) modal.remove();
@@ -997,6 +1032,7 @@ function fecharEscolhaTrocaRpg() {
     if (focoAnterior && typeof focoAnterior.focus === "function" && document.body.contains(focoAnterior)) {
         focoAnterior.focus();
     }
+    if (retomar) iniciarCarrosselTrocasRpg();
 }
 
 function confirmarTrocaRepetidasRpg(idCartaNova) {
@@ -1030,7 +1066,307 @@ function confirmarTrocaRepetidasRpg(idCartaNova) {
     document.getElementById("mensagem-troca-rpg").textContent = `✨ Você escolheu ${nomeCartaExibicaoRpg(nova)}! ${RPG_COPIAS_EXTRAS_PARA_TROCA} cópias extras de ${nomeCartaExibicaoRpg(origem)} foram usadas na troca.`;
 }
 
+function converterRepetidasPorMoedasRpg(idCartaOrigem, quantidade, moedas) {
+    let mensagem = document.getElementById("mensagem-troca-rpg");
+    let quantidadeAtual = quantidadeCartaRpg(idCartaOrigem);
+    if (quantidadeAtual < quantidade + 1) {
+        mensagem.textContent = `Você precisa manter 1 carta e ter ${quantidade} cópias extras para essa troca.`;
+        return;
+    }
+    let origem = rpgCatalogo.find(carta => carta.id === idCartaOrigem);
+    let idCanonicoOrigem = idColecaoCanonicoRpg(idCartaOrigem);
+    rpgProgresso.colecao[idCanonicoOrigem] = quantidadeAtual - quantidade;
+    rpgProgresso.moedas += moedas;
+    salvarProgressoRpg();
+    atualizarResumoMenuRpg();
+    renderizarColecaoRpg();
+    renderizarLojaRpg();
+    document.getElementById("mensagem-troca-rpg").textContent = `🪙 Você trocou ${quantidade} cópias extras de ${nomeCartaExibicaoRpg(origem)} por ${moedas} moedas.`;
+}
+
+function renderizarConversoesMoedasRpg() {
+    let lista = document.getElementById("lista-conversoes-moedas-rpg");
+    if (!lista) return;
+    lista.innerHTML = "";
+    let cartas = cartasUnicasPorColecaoRpg(rpgCatalogo).filter(carta => quantidadeCartaRpg(carta.id) > 1);
+    if (cartas.length === 0) {
+        let vazio = document.createElement("p");
+        vazio.className = "troca-repetidas-vazia-rpg";
+        vazio.textContent = "Junte cópias extras para trocar por moedas.";
+        lista.appendChild(vazio);
+        return;
+    }
+
+    cartas.forEach(carta => {
+        RPG_TROCAS_MOEDAS.forEach(opcao => {
+            let item = document.createElement("article");
+            let disponivel = quantidadeCartaRpg(carta.id) >= opcao.quantidade + 1;
+            item.className = `conversao-moedas-rpg${disponivel ? "" : " conversao-indisponivel-rpg"}`;
+            item.innerHTML = `
+                <img src="${carta.img}" alt="Carta ${nomeCartaExibicaoRpg(carta)}">
+                <div><strong>${nomeCartaExibicaoRpg(carta)}</strong><small>x${quantidadeCartaRpg(carta.id)} na coleção</small></div>
+                <div class="resumo-conversao-moedas-rpg"><b>${opcao.quantidade}</b> cópias extras <span>→</span> <b>🪙 ${opcao.moedas}</b></div>
+                <button type="button" ${disponivel ? "" : "disabled"}>Trocar</button>
+            `;
+            if (disponivel) item.querySelector("button").addEventListener("click", () => converterRepetidasPorMoedasRpg(carta.id, opcao.quantidade, opcao.moedas));
+            lista.appendChild(item);
+        });
+    });
+}
+
+function fecharConfiguracaoTrocaRpg({ retomar = true } = {}) {
+    let modal = document.querySelector(".modal-configuracao-troca-rpg");
+    if (modal) modal.remove();
+    document.body.classList.remove("modal-troca-aberto-rpg");
+    if (retomar) iniciarCarrosselTrocasRpg();
+}
+
+function configuracaoTrocaRpg(tipo) {
+    if (tipo === "carta") return { quantidade: RPG_COPIAS_EXTRAS_PARA_TROCA, texto: "1 carta nova" };
+    let troca = RPG_TROCAS_MOEDAS.find(opcao => opcao.moedas === Number(tipo.replace("moedas-", "")));
+    return troca ? { quantidade: troca.quantidade, texto: `${troca.moedas} moedas` } : null;
+}
+
+function atualizarResumoConfiguracaoTrocaRpg(modal) {
+    let origem = modal.querySelector(".carta-origem-troca-rpg")?.value || modal.dataset.idCartaOrigem;
+    let tipo = modal.querySelector(".tipo-recompensa-troca-rpg").value;
+    let config = configuracaoTrocaRpg(tipo);
+    let quantidade = Number(modal.querySelector(".quantidade-troca-rpg")?.value) || config?.quantidade || 0;
+    let extras = Math.max(0, quantidadeCartaRpg(origem) - 1);
+    let resumo = modal.querySelector(".resumo-configuracao-troca-rpg");
+    let confirmar = modal.querySelector(".confirmar-configuracao-troca-rpg");
+    let valido = Boolean(config && quantidade === config.quantidade && extras >= config.quantidade);
+    resumo.textContent = config
+        ? `Necessário: ${config.quantidade} cópias · disponíveis: ${extras} extras.`
+        : "Escolha uma recompensa.";
+    resumo.classList.toggle("troca-configuracao-invalida-rpg", !valido);
+    confirmar.disabled = !valido;
+}
+
+function confirmarConfiguracaoTrocaRpg(modal) {
+    let idCartaOrigem = modal.querySelector(".carta-origem-troca-rpg")?.value || modal.dataset.idCartaOrigem;
+    let tipo = modal.querySelector(".tipo-recompensa-troca-rpg").value;
+    let config = configuracaoTrocaRpg(tipo);
+    let quantidade = Number(modal.querySelector(".quantidade-troca-rpg")?.value) || config?.quantidade || 0;
+    let extras = Math.max(0, quantidadeCartaRpg(idCartaOrigem) - 1);
+    if (!config || quantidade !== config.quantidade || extras < config.quantidade) return;
+    let botaoOrigem = rpgTrocaPendente?.focoAnterior || null;
+    fecharConfiguracaoTrocaRpg({ retomar: false });
+    if (tipo === "carta") {
+        abrirEscolhaTrocaRpg(idCartaOrigem, botaoOrigem);
+    } else {
+        converterRepetidasPorMoedasRpg(idCartaOrigem, config.quantidade, Number(tipo.replace("moedas-", "")));
+    }
+}
+
+function abrirConfiguracaoTrocaGeralRpg(tipoInicial = "carta", focoAnterior = document.activeElement) {
+    pararCarrosselTrocasRpg();
+    fecharConfiguracaoTrocaRpg({ retomar: false });
+    let cartasComRepetidas = cartasUnicasPorColecaoRpg(rpgCatalogo).filter(carta => quantidadeCartaRpg(carta.id) > 1);
+    let mensagem = document.getElementById("mensagem-troca-rpg");
+    if (cartasComRepetidas.length === 0) {
+        mensagem.textContent = "Você ainda não possui cópias repetidas suficientes para uma troca.";
+        iniciarCarrosselTrocasRpg();
+        return;
+    }
+    let modal = document.createElement("div");
+    modal.className = "modal-troca-rpg modal-configuracao-troca-rpg";
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-labelledby", "titulo-configuracao-troca-rpg");
+    modal.innerHTML = `
+        <article class="modal-troca-conteudo-rpg configuracao-troca-conteudo-rpg">
+            <button type="button" class="fechar-modal-troca-rpg" aria-label="Cancelar troca">×</button>
+            <span class="etiqueta-menu">ESCOLHER TROCA</span>
+            <h2 id="titulo-configuracao-troca-rpg">Escolha sua troca</h2>
+            <div class="opcoes-recompensa-principal-rpg" aria-label="Escolha o tipo de recompensa">
+                <button type="button" data-recompensa-principal="carta"><span>🃏</span><strong>Carta nova</strong><small>5 cópias repetidas</small></button>
+                <button type="button" data-recompensa-principal="moedas"><span>🪙</span><strong>Moedas</strong><small>Escolha o valor</small></button>
+            </div>
+            <div class="valores-moedas-troca-rpg" aria-label="Escolha o valor em moedas" hidden>
+                <button type="button" data-recompensa-troca="moedas-100"><span>🪙</span><strong>100 moedas</strong><small>15 cópias</small></button>
+                <button type="button" data-recompensa-troca="moedas-500"><span>💰</span><strong>500 moedas</strong><small>25 cópias</small></button>
+                <button type="button" data-recompensa-troca="moedas-1000"><span>🏆</span><strong>1.000 moedas</strong><small>40 cópias</small></button>
+            </div>
+            <select class="tipo-recompensa-troca-rpg" hidden>
+                <option value="carta">Carta nova</option>
+                <option value="moedas-100">100 moedas</option>
+                <option value="moedas-500">500 moedas</option>
+                <option value="moedas-1000">1.000 moedas</option>
+            </select>
+            <div class="desenho-troca-rpg bloco-cartas-repetidas-troca-rpg">
+                <div class="cabecalho-cartas-repetidas-troca-rpg">
+                    <span>🃏</span><strong>Cartas repetidas</strong><small>Escolha uma carta para trocar</small>
+                </div>
+                <input class="busca-cartas-repetidas-troca-rpg" type="search" placeholder="Pesquisar carta..." aria-label="Pesquisar cartas repetidas">
+                <div class="lista-cartas-repetidas-troca-rpg" role="listbox" aria-label="Cartas repetidas disponíveis"></div>
+            </div>
+            <select class="carta-origem-troca-rpg" aria-hidden="true" tabindex="-1" hidden></select>
+            <input class="quantidade-troca-rpg" type="hidden" value="5">
+            <p class="resumo-configuracao-troca-rpg" aria-live="polite"></p>
+            <div class="acoes-modal-troca-rpg">
+                <button type="button" class="cancelar-troca-rpg">Cancelar</button>
+                <button type="button" class="confirmar-configuracao-troca-rpg" disabled>Continuar</button>
+            </div>
+        </article>
+    `;
+    let selectCarta = modal.querySelector(".carta-origem-troca-rpg");
+    let listaCartas = modal.querySelector(".lista-cartas-repetidas-troca-rpg");
+    let renderizarCartasRepetidas = filtro => {
+        let termo = String(filtro || "").trim().toLocaleLowerCase();
+        listaCartas.innerHTML = "";
+        cartasComRepetidas.filter(carta => nomeCartaExibicaoRpg(carta).toLocaleLowerCase().includes(termo)).forEach(carta => {
+            let botao = document.createElement("button");
+            botao.type = "button";
+            botao.className = "carta-repetida-opcao-rpg";
+            botao.dataset.idCarta = carta.id;
+            botao.setAttribute("role", "option");
+            botao.innerHTML = `<img src="${carta.img}" alt="${nomeCartaExibicaoRpg(carta)}"><strong>${nomeCartaExibicaoRpg(carta)}</strong><small>x${quantidadeCartaRpg(carta.id)} · ${Math.max(0, quantidadeCartaRpg(carta.id) - 1)} extras</small>`;
+            botao.addEventListener("click", () => {
+                selectCarta.value = carta.id;
+                atualizarQuantidade();
+            });
+            listaCartas.appendChild(botao);
+        });
+    };
+    cartasComRepetidas.forEach(carta => {
+        let option = document.createElement("option");
+        option.value = carta.id;
+        option.textContent = `${nomeCartaExibicaoRpg(carta)} — x${quantidadeCartaRpg(carta.id)} (${Math.max(0, quantidadeCartaRpg(carta.id) - 1)} extras)`;
+        selectCarta.appendChild(option);
+    });
+    let tipo = modal.querySelector(".tipo-recompensa-troca-rpg");
+    tipo.value = tipoInicial;
+    let input = modal.querySelector(".quantidade-troca-rpg");
+    let atualizarPreviewOrigem = () => {
+        let carta = rpgCatalogo.find(item => item.id === selectCarta.value);
+        if (!carta) return;
+        listaCartas.querySelectorAll(".carta-repetida-opcao-rpg").forEach(botao => {
+            let ativo = botao.dataset.idCarta === carta.id;
+            botao.classList.toggle("selecionada", ativo);
+            botao.setAttribute("aria-selected", ativo ? "true" : "false");
+        });
+    };
+    let atualizarOpcoesPremio = () => {
+        let usandoMoedas = tipo.value.startsWith("moedas-");
+        modal.querySelectorAll("[data-recompensa-principal]").forEach(botao => {
+            botao.classList.toggle("selecionada", botao.dataset.recompensaPrincipal === (usandoMoedas ? "moedas" : "carta"));
+        });
+        let valores = modal.querySelector(".valores-moedas-troca-rpg");
+        valores.hidden = !usandoMoedas;
+        valores.querySelectorAll("[data-recompensa-troca]").forEach(botao => {
+            botao.classList.toggle("selecionada", botao.dataset.recompensaTroca === tipo.value);
+        });
+    };
+    let atualizarQuantidade = () => {
+        let config = configuracaoTrocaRpg(tipo.value);
+        if (config) input.value = config.quantidade;
+        input.max = Math.max(1, quantidadeCartaRpg(selectCarta.value) - 1);
+        atualizarPreviewOrigem();
+        atualizarOpcoesPremio();
+        atualizarResumoConfiguracaoTrocaRpg(modal);
+    };
+    selectCarta.addEventListener("change", atualizarQuantidade);
+    modal.querySelector(".busca-cartas-repetidas-troca-rpg").addEventListener("input", evento => renderizarCartasRepetidas(evento.target.value));
+    tipo.addEventListener("change", atualizarQuantidade);
+    input.addEventListener("input", () => atualizarResumoConfiguracaoTrocaRpg(modal));
+    modal.querySelectorAll("[data-recompensa-principal]").forEach(botao => {
+        botao.addEventListener("click", () => {
+            if (botao.dataset.recompensaPrincipal === "carta") tipo.value = "carta";
+            else if (!tipo.value.startsWith("moedas-")) tipo.value = "moedas-100";
+            atualizarQuantidade();
+        });
+    });
+    modal.querySelectorAll("[data-recompensa-troca]").forEach(botao => {
+        botao.addEventListener("click", () => {
+            tipo.value = botao.dataset.recompensaTroca;
+            atualizarQuantidade();
+        });
+    });
+    modal.querySelector(".fechar-modal-troca-rpg").addEventListener("click", fecharConfiguracaoTrocaRpg);
+    modal.querySelector(".cancelar-troca-rpg").addEventListener("click", fecharConfiguracaoTrocaRpg);
+    modal.querySelector(".confirmar-configuracao-troca-rpg").addEventListener("click", () => confirmarConfiguracaoTrocaRpg(modal));
+    modal.addEventListener("click", evento => {
+        if (evento.target === modal) fecharConfiguracaoTrocaRpg();
+    });
+    modal.addEventListener("keydown", evento => {
+        if (evento.key === "Escape") fecharConfiguracaoTrocaRpg();
+    });
+    document.body.appendChild(modal);
+    document.body.classList.add("modal-troca-aberto-rpg");
+    rpgTrocaPendente = { focoAnterior };
+    selectCarta.value = cartasComRepetidas[0].id;
+    renderizarCartasRepetidas("");
+    atualizarQuantidade();
+    modal.querySelector(".busca-cartas-repetidas-troca-rpg").focus();
+}
+
+function abrirConfiguracaoTrocaRpg(idCartaOrigem, focoAnterior = document.activeElement) {
+    pararCarrosselTrocasRpg();
+    fecharConfiguracaoTrocaRpg({ retomar: false });
+    let carta = rpgCatalogo.find(item => item.id === idCartaOrigem);
+    if (!carta) return;
+    let quantidadeAtual = quantidadeCartaRpg(idCartaOrigem);
+    let extras = Math.max(0, quantidadeAtual - 1);
+    let modal = document.createElement("div");
+    modal.className = "modal-troca-rpg modal-configuracao-troca-rpg";
+    modal.dataset.idCartaOrigem = idCartaOrigem;
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-labelledby", "titulo-configuracao-troca-rpg");
+    modal.innerHTML = `
+        <article class="modal-troca-conteudo-rpg configuracao-troca-conteudo-rpg">
+            <button type="button" class="fechar-modal-troca-rpg" aria-label="Cancelar troca">×</button>
+            <span class="etiqueta-menu">ESCOLHER TROCA</span>
+            <h2 id="titulo-configuracao-troca-rpg">${nomeCartaExibicaoRpg(carta)}</h2>
+            <div class="carta-origem-configuracao-rpg">
+                <img src="${carta.img}" alt="Carta ${nomeCartaExibicaoRpg(carta)}">
+                <div><strong>x${quantidadeAtual} na coleção</strong><small>${extras} cópias extras disponíveis</small></div>
+            </div>
+            <label class="campo-configuracao-troca-rpg">Quantidade de cópias
+                <input class="quantidade-troca-rpg" type="number" min="1" max="${Math.max(1, extras)}" value="${Math.min(RPG_COPIAS_EXTRAS_PARA_TROCA, Math.max(1, extras))}">
+            </label>
+            <label class="campo-configuracao-troca-rpg">Trocar por
+                <select class="tipo-recompensa-troca-rpg">
+                    <option value="carta">1 carta nova (5 cópias)</option>
+                    <option value="moedas-100">100 moedas (15 cópias)</option>
+                    <option value="moedas-500">500 moedas (25 cópias)</option>
+                    <option value="moedas-1000">1.000 moedas (40 cópias)</option>
+                </select>
+            </label>
+            <p class="resumo-configuracao-troca-rpg" aria-live="polite"></p>
+            <div class="acoes-modal-troca-rpg">
+                <button type="button" class="cancelar-troca-rpg">Cancelar</button>
+                <button type="button" class="confirmar-configuracao-troca-rpg" disabled>Continuar</button>
+            </div>
+        </article>
+    `;
+    let input = modal.querySelector(".quantidade-troca-rpg");
+    let select = modal.querySelector(".tipo-recompensa-troca-rpg");
+    input.addEventListener("input", () => atualizarResumoConfiguracaoTrocaRpg(modal));
+    select.addEventListener("change", () => {
+        let config = configuracaoTrocaRpg(select.value);
+        if (config) input.value = config.quantidade;
+        atualizarResumoConfiguracaoTrocaRpg(modal);
+    });
+    modal.querySelector(".fechar-modal-troca-rpg").addEventListener("click", fecharConfiguracaoTrocaRpg);
+    modal.querySelector(".cancelar-troca-rpg").addEventListener("click", fecharConfiguracaoTrocaRpg);
+    modal.querySelector(".confirmar-configuracao-troca-rpg").addEventListener("click", () => confirmarConfiguracaoTrocaRpg(modal));
+    modal.addEventListener("click", evento => {
+        if (evento.target === modal) fecharConfiguracaoTrocaRpg();
+    });
+    modal.addEventListener("keydown", evento => {
+        if (evento.key === "Escape") fecharConfiguracaoTrocaRpg();
+    });
+    document.body.appendChild(modal);
+    document.body.classList.add("modal-troca-aberto-rpg");
+    rpgTrocaPendente = { focoAnterior };
+    atualizarResumoConfiguracaoTrocaRpg(modal);
+    modal.querySelector(".quantidade-troca-rpg").focus();
+}
+
 function abrirEscolhaTrocaRpg(idCartaOrigem, focoAnterior = document.activeElement) {
+    pararCarrosselTrocasRpg();
     let mensagem = document.getElementById("mensagem-troca-rpg");
     let quantidadeAtual = quantidadeCartaRpg(idCartaOrigem);
     if (quantidadeAtual < RPG_COPIAS_EXTRAS_PARA_TROCA + 1) {
@@ -1045,7 +1381,7 @@ function abrirEscolhaTrocaRpg(idCartaOrigem, focoAnterior = document.activeEleme
     }
 
     let origem = rpgCatalogo.find(carta => carta.id === idCartaOrigem);
-    fecharEscolhaTrocaRpg();
+    fecharEscolhaTrocaRpg({ retomar: false });
     rpgTrocaPendente = { idCartaOrigem, focoAnterior, idCartaNova: null };
 
     let modal = document.createElement("div");
@@ -1113,33 +1449,91 @@ function abrirEscolhaTrocaRpg(idCartaOrigem, focoAnterior = document.activeEleme
     modal.querySelector(".opcao-troca-rpg").focus();
 }
 
-function renderizarTrocasRepetidasRpg() {
-    let lista = document.getElementById("lista-trocas-rpg");
-    if (!lista) return;
-    let elegiveis = cartasUnicasPorColecaoRpg(rpgCatalogo).filter(carta => quantidadeCartaRpg(carta.id) >= RPG_COPIAS_EXTRAS_PARA_TROCA + 1);
-    let existemNovas = cartasPermitidasNaEraRpg().some(carta => quantidadeCartaRpg(carta.id) === 0);
-    lista.innerHTML = "";
-
-    if (elegiveis.length === 0 || !existemNovas) {
-        let vazio = document.createElement("p");
-        vazio.className = "troca-repetidas-vazia-rpg";
-        vazio.textContent = !existemNovas
-            ? "Todas as cartas disponíveis já foram descobertas."
-            : `Nenhuma carta possui ${RPG_COPIAS_EXTRAS_PARA_TROCA} cópias extras ainda.`;
-        lista.appendChild(vazio);
-        return;
+function pararCarrosselTrocasRpg() {
+    if (rpgCarrosselTrocasTimer) {
+        clearInterval(rpgCarrosselTrocasTimer);
+        rpgCarrosselTrocasTimer = null;
     }
+    if (rpgCarrosselTrocasFrame) {
+        cancelAnimationFrame(rpgCarrosselTrocasFrame);
+        rpgCarrosselTrocasFrame = null;
+    }
+    rpgCarrosselTrocasUltimoTempo = 0;
+    rpgCarrosselTrocasDeslocamento = 0;
+}
 
-    elegiveis.forEach(carta => {
-        let item = document.createElement("article");
-        item.innerHTML = `
-            <img src="${carta.img}" alt="Carta ${nomeCartaExibicaoRpg(carta)}">
-            <div><strong>${nomeCartaExibicaoRpg(carta)}</strong><small>x${quantidadeCartaRpg(carta.id)} na coleção</small></div>
-            <button type="button">Trocar ${RPG_COPIAS_EXTRAS_PARA_TROCA}</button>
-        `;
-        item.querySelector("button").addEventListener("click", evento => abrirEscolhaTrocaRpg(carta.id, evento.currentTarget));
-        lista.appendChild(item);
-    });
+function iniciarCarrosselTrocasRpg() {
+    pararCarrosselTrocasRpg();
+    let carrossel = document.getElementById("monstruario-trocas-rpg");
+    if (!carrossel || !rpgOfertasTrocaExibicao.length) return;
+    carrossel.onclick = () => abrirConfiguracaoTrocaGeralRpg("carta", carrossel);
+    carrossel.onkeydown = evento => {
+        if (evento.key === "Enter" || evento.key === " ") {
+            evento.preventDefault();
+            abrirConfiguracaoTrocaGeralRpg("carta", carrossel);
+        }
+    };
+
+    let faixa = carrossel.querySelector(".faixa-ofertas-troca-rpg");
+    if (!faixa) return;
+    faixa.style.animation = "none";
+    faixa.style.transform = "translate3d(0, 0, 0)";
+    let moverFaixa = tempo => {
+        if (!document.body.contains(faixa)) return;
+        if (!rpgCarrosselTrocasUltimoTempo) rpgCarrosselTrocasUltimoTempo = tempo;
+        let delta = Math.min(64, tempo - rpgCarrosselTrocasUltimoTempo);
+        rpgCarrosselTrocasUltimoTempo = tempo;
+        rpgCarrosselTrocasDeslocamento += delta * 0.055;
+        let ciclo = faixa.scrollWidth / 2;
+        if (ciclo > 0 && rpgCarrosselTrocasDeslocamento >= ciclo) rpgCarrosselTrocasDeslocamento -= ciclo;
+        faixa.style.transform = `translate3d(${-rpgCarrosselTrocasDeslocamento}px, 0, 0)`;
+        rpgCarrosselTrocasFrame = requestAnimationFrame(moverFaixa);
+    };
+    rpgCarrosselTrocasFrame = requestAnimationFrame(moverFaixa);
+}
+
+function renderizarOfertaExibicaoTrocaRpg(carrossel) {
+    if (!carrossel || !rpgOfertasTrocaExibicao.length) return;
+    let ofertas = [...rpgOfertasTrocaExibicao, ...rpgOfertasTrocaExibicao];
+    carrossel.innerHTML = `
+        <div class="faixa-ofertas-troca-rpg">
+            ${ofertas.map(oferta => `
+                <div class="item-faixa-oferta-troca-rpg">
+                    ${oferta.imagem ? `<img src="${oferta.imagem}" alt="Carta ${oferta.titulo}">` : `<span>${oferta.icone}</span>`}
+                    <strong>${oferta.titulo}</strong><small>${oferta.detalhe}</small>
+                </div>
+            `).join("")}
+        </div>
+        <div class="legenda-carrossel-troca-rpg">Clique na exposição para escolher sua troca</div>
+    `;
+}
+
+function renderizarTrocasRepetidasRpg() {
+    let lista = document.getElementById("monstruario-trocas-rpg");
+    if (!lista) return;
+    let cartaExibicao = id => {
+        let carta = rpgCatalogo.find(item => item.id === id);
+        return carta ? { imagem: carta.img, titulo: nomeCartaExibicaoRpg(carta) } : { imagem: null, titulo: "Carta nova" };
+    };
+    let guerreiro = cartaExibicao("guerreiro");
+    let mago = cartaExibicao("mago");
+    let goblin = cartaExibicao("goblin");
+    let cavaleiro = cartaExibicao("cavaleiro");
+    rpgOfertasTrocaExibicao = [
+        { tipo: "carta", ...guerreiro, icone: "🃏", detalhe: "5 cópias repetidas" },
+        { tipo: "moedas-100", icone: "🪙", titulo: "100 moedas", detalhe: "15 cópias repetidas" },
+        { tipo: "carta", ...mago, icone: "🃏", detalhe: "5 cópias repetidas" },
+        { tipo: "moedas-500", icone: "💰", titulo: "500 moedas", detalhe: "25 cópias repetidas" },
+        { tipo: "carta", ...goblin, icone: "🃏", detalhe: "5 cópias repetidas" },
+        { tipo: "moedas-1000", icone: "🏆", titulo: "1.000 moedas", detalhe: "40 cópias repetidas" },
+        { tipo: "carta", ...cavaleiro, icone: "🃏", detalhe: "5 cópias repetidas" },
+        { tipo: "moedas-100", icone: "🪙", titulo: "100 moedas", detalhe: "15 cópias repetidas" }
+    ];
+    rpgIndiceOfertaTroca = 0;
+    lista.tabIndex = 0;
+    lista.setAttribute("role", "button");
+    renderizarOfertaExibicaoTrocaRpg(lista);
+    iniciarCarrosselTrocasRpg();
 }
 
 function abrirPaginaMenuRpg(pagina) {
@@ -1154,6 +1548,7 @@ function abrirPaginaMenuRpg(pagina) {
     if (pagina === "eras") renderizarLinhaDoTempoRpg();
     if (pagina === "cartas") renderizarColecaoRpg();
     if (pagina === "loja") renderizarLojaRpg();
+    if (pagina !== "loja") pararCarrosselTrocasRpg();
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -1301,6 +1696,14 @@ function conectarEventosMenuRpg() {
             rpgFiltroEra = botao.dataset.era;
             document.querySelectorAll(".filtro-era").forEach(item => item.classList.toggle("ativo", item === botao));
             renderizarColecaoRpg();
+        });
+    });
+    document.querySelectorAll(".seta-carrossel-trocas-rpg").forEach(botao => {
+        botao.addEventListener("click", () => {
+            let carrossel = document.getElementById("monstruario-trocas-rpg");
+            if (!carrossel) return;
+            let direcao = Number(botao.dataset.direcaoCarrossel) || 1;
+            carrossel.scrollBy({ left: direcao * Math.max(190, carrossel.clientWidth * .72), behavior: "smooth" });
         });
     });
     document.getElementById("fechar-modal-carta-rpg").addEventListener("click", fecharDetalhesCartaRpg);

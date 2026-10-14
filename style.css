@@ -6233,6 +6233,49 @@ body.modal-carta-aberto-rpg { overflow: hidden; }
     gap: 15px;
 }
 
+.bloco-loja-rpg {
+    margin-top: 18px;
+    padding: 0 21px 21px;
+    border: 1px solid rgba(115, 195, 241, .3);
+    border-radius: 17px;
+    background: linear-gradient(135deg, rgba(16, 52, 84, .94), rgba(5, 21, 40, .97));
+}
+
+.cabecalho-bloco-loja-rpg { margin: 0 -21px; padding: 12px 21px 13px; border-bottom: 2px solid rgba(104, 194, 238, .58); background: linear-gradient(90deg, rgba(23, 89, 132, .75), rgba(9, 39, 69, .16)); }
+.cabecalho-bloco-loja-rpg h3 { margin: 3px 0 2px; color: #fff0ad; font-family: Georgia, serif; font-size: 1.35rem; text-align: center; }
+.cabecalho-bloco-loja-rpg p { margin: 0; color: #9ebfd4; line-height: 1.45; text-align: left; }
+.bloco-presente-loja-rpg .cabecalho-bloco-loja-rpg { border-bottom-color: rgba(120, 218, 159, .65); background: linear-gradient(90deg, rgba(26, 103, 86, .72), rgba(10, 46, 56, .16)); }
+.troca-repetidas-rpg .cabecalho-bloco-loja-rpg { border-bottom-color: rgba(185, 133, 255, .64); background: linear-gradient(90deg, rgba(82, 46, 127, .72), rgba(28, 24, 66, .16)); }
+.bloco-baus-loja-rpg .cabecalho-bloco-loja-rpg { border-bottom-color: rgba(255, 203, 84, .68); background: linear-gradient(90deg, rgba(111, 78, 24, .7), rgba(42, 34, 22, .16)); }
+.bloco-moedas-reais-rpg .cabecalho-bloco-loja-rpg { border-bottom-color: rgba(109, 221, 247, .65); background: linear-gradient(90deg, rgba(22, 96, 128, .7), rgba(8, 39, 60, .16)); }
+.grade-presente-loja-rpg { max-width: 390px; margin-top: 16px; display: grid; grid-template-columns: minmax(0, 1fr); }
+.grade-cartas-loja-rpg { margin-top: 16px; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+.grade-baus-loja-rpg { margin-top: 16px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.cabecalho-cartas-loja-rpg { margin-top: 25px; border-top: 2px solid rgba(104, 194, 238, .45); border-bottom: 0; background: transparent; }
+.cabecalho-conversoes-rpg { margin-top: 25px; border-top: 2px solid rgba(185, 133, 255, .35); border-bottom: 0; background: transparent; }
+.oferta-vazia-rpg { opacity: .67; border-style: dashed; }
+.oferta-vazia-rpg::before { display: none; }
+
+.lista-conversoes-moedas-rpg { margin-top: 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.conversao-moedas-rpg { padding: 10px; display: grid; grid-template-columns: 48px 1fr; align-items: center; gap: 8px; border: 1px solid rgba(118, 194, 239, .25); border-radius: 12px; background: rgba(4, 20, 39, .72); }
+.conversao-moedas-rpg img { width: 48px; height: 60px; object-fit: contain; border-radius: 5px; }
+.conversao-moedas-rpg > div:nth-of-type(1) { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.conversao-moedas-rpg strong { color: #fff0b0; font-size: .87rem; }
+.conversao-moedas-rpg small { color: #8fb0c6; }
+.resumo-conversao-moedas-rpg { grid-column: 1 / -1; color: #c5ddeb; font-size: .82rem; }
+.resumo-conversao-moedas-rpg b { color: #ffe17b; }
+.resumo-conversao-moedas-rpg span { padding: 0 5px; color: #72c9f2; }
+.conversao-moedas-rpg button { grid-column: 1 / -1; min-height: 35px; margin: 0; padding: 6px 10px; border: 1px solid #ffd560; border-radius: 8px; color: #382505; font-weight: 900; background: linear-gradient(to bottom, #ffe477, #e9a020); }
+.conversao-moedas-rpg button:disabled { color: #6e8796; border-color: #35546a; background: #17364d; box-shadow: none; }
+.conversao-indisponivel-rpg { opacity: .55; }
+
+.grade-moedas-reais-rpg { margin-top: 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.pacote-moedas-real-rpg { min-height: 190px; padding: 17px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: 1px solid rgba(255, 215, 91, .42); border-radius: 14px; background: linear-gradient(155deg, rgba(55, 66, 92, .82), rgba(10, 27, 47, .96)); text-align: center; }
+.pacote-moedas-real-rpg > span { font-size: 2.8rem; filter: drop-shadow(0 4px 6px rgba(0,0,0,.35)); }
+.pacote-moedas-real-rpg strong { color: #fff0ad; font-family: Georgia, serif; font-size: 1.12rem; }
+.pacote-moedas-real-rpg small { color: #9ebfd4; }
+.pacote-moedas-real-rpg button { width: 100%; min-height: 38px; margin-top: 5px; border: 1px solid #46657a; border-radius: 8px; color: #7891a0; background: #17364d; }
+
 .oferta-loja-rpg {
     min-height: 330px;
     padding: 15px;
@@ -6346,6 +6389,130 @@ body.modal-carta-aberto-rpg { overflow: hidden; }
 .troca-repetidas-vazia-rpg { grid-column: 1 / -1; margin: 0; padding: 16px; color: #87a9c0; text-align: center; border: 1px dashed rgba(120, 188, 230, .25); border-radius: 10px; }
 .mensagem-troca-rpg { min-height: 22px; margin: 12px 0 0; color: #ffe078; font-weight: 800; text-align: center; }
 
+.carrossel-trocas-rpg { margin-top: 17px; display: grid; grid-template-columns: 38px minmax(0, 1fr) 38px; align-items: center; gap: 8px; }
+.monstruario-trocas-rpg { min-width: 0; display: flex; gap: 11px; overflow-x: auto; padding: 3px 2px 12px; scroll-behavior: smooth; scroll-snap-type: x proximity; scrollbar-color: #e4b945 rgba(4, 20, 39, .8); scrollbar-width: thin; }
+.monstruario-trocas-rpg article { flex: 0 0 130px; min-width: 130px; min-height: 245px; padding: 9px; display: flex; flex-direction: column; align-items: center; gap: 6px; border: 1px solid rgba(118, 194, 239, .3); border-radius: 12px; background: rgba(4, 20, 39, .72); scroll-snap-align: start; }
+.monstruario-trocas-rpg article img { width: 100%; height: 132px; object-fit: contain; border-radius: 6px; }
+.monstruario-trocas-rpg article strong { width: 100%; overflow: hidden; color: #fff0b0; font-size: .83rem; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.monstruario-trocas-rpg article small { min-height: 18px; color: #8fb0c6; font-size: .72rem; text-align: center; }
+.monstruario-trocas-rpg article button { width: 100%; min-height: 35px; margin-top: auto; padding: 6px 5px; border: 1px solid #ffd560; border-radius: 8px; color: #382505; font-size: .73rem; font-weight: 900; background: linear-gradient(to bottom, #ffe477, #e9a020); }
+.monstruario-trocas-rpg article button:disabled { color: #6e8796; border-color: #35546a; background: #17364d; box-shadow: none; }
+.monstruario-carta-bloqueada-rpg { opacity: .52; }
+.monstruario-carta-disponivel-rpg { border-color: rgba(255, 213, 96, .55) !important; box-shadow: inset 0 0 18px rgba(255, 198, 55, .06); cursor: pointer; }
+.monstruario-carta-disponivel-rpg:hover,
+.monstruario-carta-disponivel-rpg:focus-visible { border-color: #ffe37a !important; outline: none; transform: translateY(-2px); }
+.seta-carrossel-trocas-rpg { width: 36px; height: 54px; margin: 0; padding: 0; border: 1px solid #d6ad42; border-radius: 10px; color: #ffe27a; font: 800 2rem/1 Georgia, serif; background: rgba(8, 34, 56, .94); }
+.seta-carrossel-trocas-rpg:hover { color: #2e260f; background: #f1c957; }
+.oferta-exibicao-troca-rpg { flex-basis: 280px !important; min-width: 280px !important; min-height: 205px !important; justify-content: center; border-color: rgba(255, 213, 96, .48) !important; background: radial-gradient(circle at 50% 20%, rgba(255, 201, 69, .18), transparent 53%), rgba(4, 20, 39, .84) !important; cursor: pointer; }
+.oferta-exibicao-troca-rpg:hover,
+.oferta-exibicao-troca-rpg:focus-visible { border-color: #ffe37a !important; outline: none; transform: translateY(-2px); }
+.icone-exibicao-troca-rpg { font-size: 3.8rem; line-height: 1; filter: drop-shadow(0 7px 6px rgba(0,0,0,.4)); }
+.oferta-exibicao-troca-rpg strong { width: auto !important; overflow: visible !important; color: #fff0b0; font-family: Georgia, serif; font-size: 1.12rem; text-overflow: clip !important; white-space: normal !important; }
+.oferta-exibicao-troca-rpg small { min-height: 0; color: #b2cad7; font-size: .8rem; }
+.clique-exibicao-troca-rpg { margin-top: 5px; padding: 6px 11px; border: 1px solid #d8b44b; border-radius: 999px; color: #ffe27a; font-size: .72rem; font-weight: 900; }
+
+.carrossel-trocas-rpg { margin-top: 17px; display: block; }
+.monstruario-trocas-rpg { display: block; overflow: hidden; padding: 0; border: 2px solid rgba(218, 180, 72, .72); border-radius: 24px; background: linear-gradient(155deg, rgba(24, 67, 101, .98), rgba(5, 22, 42, .99)); box-shadow: 0 12px 28px rgba(0,0,0,.28), inset 0 0 25px rgba(108, 199, 242, .06); cursor: pointer; scrollbar-width: none; }
+.monstruario-trocas-rpg::-webkit-scrollbar { display: none; }
+.oferta-exibicao-troca-rpg { width: 100%; min-width: 0 !important; min-height: 260px !important; padding: 20px 25px 15px !important; display: block !important; border: 0 !important; border-radius: 22px !important; background: transparent !important; box-shadow: none !important; animation: entrada-oferta-troca-rpg .42s ease-out; cursor: pointer; }
+.oferta-exibicao-troca-rpg:hover,
+.oferta-exibicao-troca-rpg:focus-visible { transform: none; outline: none; }
+.visual-oferta-exibicao-troca-rpg { min-height: 156px; display: grid; grid-template-columns: minmax(110px, 1fr) 60px minmax(145px, 1fr); align-items: center; justify-items: center; gap: 12px; }
+.premio-exibicao-troca-rpg,
+.custo-exibicao-troca-rpg { min-width: 0; width: min(100%, 270px); min-height: 122px; padding: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; border: 1px solid rgba(135, 206, 239, .42); border-radius: 15px; background: rgba(4, 23, 43, .72); text-align: center; }
+.premio-exibicao-troca-rpg { border-color: rgba(255, 214, 95, .68); background: radial-gradient(circle at 50% 20%, rgba(255, 208, 68, .18), transparent 62%), rgba(4, 23, 43, .72); }
+.premio-exibicao-troca-rpg span,
+.custo-exibicao-troca-rpg span { font-size: 3.15rem; line-height: 1; filter: drop-shadow(0 6px 6px rgba(0,0,0,.4)); }
+.premio-exibicao-troca-rpg strong,
+.custo-exibicao-troca-rpg strong { color: #fff0ae; font-family: Georgia, serif; font-size: 1.08rem; }
+.custo-exibicao-troca-rpg small { color: #9fc1d1; font-size: .77rem; }
+.seta-exibicao-troca-rpg { color: #f5cf62; font-size: 2.15rem; text-shadow: 0 0 12px rgba(245, 207, 98, .35); }
+.rodape-oferta-exibicao-troca-rpg { margin: 0 -25px; padding: 13px 25px 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; border-top: 1px solid rgba(138, 201, 230, .24); }
+.rodape-oferta-exibicao-troca-rpg strong { color: #dff4ff; font-size: .9rem; }
+.rodape-oferta-exibicao-troca-rpg span { color: #ffe17b; font-size: .78rem; font-weight: 800; }
+.indicadores-oferta-troca-rpg { margin-top: 12px; display: flex; justify-content: center; gap: 6px; }
+.indicadores-oferta-troca-rpg i { width: 7px; height: 7px; display: block; border-radius: 50%; background: #48667a; }
+.indicadores-oferta-troca-rpg i.ativo { width: 20px; border-radius: 999px; background: #f1c957; }
+.monstruario-trocas-rpg { position: relative; min-height: 160px; }
+.faixa-ofertas-troca-rpg { width: max-content; min-height: 158px; padding: 16px 13px 35px; display: flex; align-items: center; gap: 13px; animation: faixa-ofertas-troca-rpg 14s linear infinite; will-change: transform; }
+.item-faixa-oferta-troca-rpg { width: 180px; min-height: 118px; padding: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border: 1px solid rgba(255, 215, 100, .55); border-radius: 15px; background: linear-gradient(150deg, rgba(24, 77, 112, .95), rgba(7, 28, 50, .98)); box-shadow: 0 7px 14px rgba(0,0,0,.26); text-align: center; }
+.item-faixa-oferta-troca-rpg > span { font-size: 2.35rem; line-height: 1; }
+.item-faixa-oferta-troca-rpg > img { width: 58px; height: 78px; object-fit: contain; border-radius: 5px; filter: drop-shadow(0 5px 5px rgba(0,0,0,.42)); }
+.item-faixa-oferta-troca-rpg strong { color: #fff0ad; font-family: Georgia, serif; font-size: .94rem; }
+.item-faixa-oferta-troca-rpg small { color: #b1cedc; font-size: .72rem; }
+.legenda-carrossel-troca-rpg { position: absolute; left: 0; right: 0; bottom: 8px; color: #ffe27a; font-size: .72rem; font-weight: 900; text-align: center; text-shadow: 0 1px 3px #06182b; pointer-events: none; }
+
+@keyframes faixa-ofertas-troca-rpg {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+}
+
+@keyframes entrada-oferta-troca-rpg {
+    from { opacity: .35; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.carta-origem-configuracao-rpg { margin: 17px 0; padding: 11px; display: flex; align-items: center; gap: 13px; border: 1px solid rgba(118, 194, 239, .3); border-radius: 12px; background: rgba(4, 20, 39, .72); }
+.carta-origem-configuracao-rpg img { width: 68px; height: 86px; object-fit: contain; border-radius: 5px; }
+.carta-origem-configuracao-rpg div { display: flex; flex-direction: column; gap: 5px; }
+.carta-origem-configuracao-rpg strong { color: #fff0b0; }
+.carta-origem-configuracao-rpg small { color: #8fb0c6; }
+.campo-configuracao-troca-rpg { margin-top: 12px; display: grid; gap: 6px; color: #dff3ff; font-weight: 800; }
+.campo-configuracao-troca-rpg input,
+.campo-configuracao-troca-rpg select { width: 100%; min-height: 43px; padding: 8px 10px; border: 1px solid rgba(124, 197, 239, .43); border-radius: 9px; color: #f2fbff; font: inherit; background: #08233d; }
+.resumo-configuracao-troca-rpg { min-height: 24px; margin: 14px 0 8px; color: #ffe27a; font-weight: 800; text-align: center; }
+.troca-configuracao-invalida-rpg { color: #ff9e9e; }
+.opcoes-recompensa-principal-rpg { margin: 17px auto 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 640px; }
+.opcoes-recompensa-principal-rpg button,
+.valores-moedas-troca-rpg button { min-height: 112px; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border: 2px solid rgba(123, 194, 232, .36); border-radius: 15px; color: #e8f7ff; background: rgba(4, 25, 45, .82); cursor: pointer; }
+.opcoes-recompensa-principal-rpg button:hover,
+.opcoes-recompensa-principal-rpg button.selecionada,
+.valores-moedas-troca-rpg button:hover,
+.valores-moedas-troca-rpg button.selecionada { border-color: #ffd861; background: linear-gradient(155deg, rgba(92, 70, 31, .9), rgba(29, 31, 52, .95)); box-shadow: 0 0 0 2px rgba(255, 216, 97, .16); }
+.opcoes-recompensa-principal-rpg button span,
+.valores-moedas-troca-rpg button span { font-size: 2.25rem; line-height: 1; }
+.opcoes-recompensa-principal-rpg button strong,
+.valores-moedas-troca-rpg button strong { color: #fff0ad; font-family: Georgia, serif; font-size: 1rem; }
+.opcoes-recompensa-principal-rpg button small,
+.valores-moedas-troca-rpg button small { color: #9fc1d1; font-size: .72rem; }
+.valores-moedas-troca-rpg { margin: 0 auto 18px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; max-width: 640px; }
+.opcoes-recompensa-troca-rpg { margin: 17px 0 20px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
+.opcoes-recompensa-troca-rpg button { min-height: 105px; margin: 0; padding: 8px 5px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border: 1px solid rgba(123, 194, 232, .36); border-radius: 12px; color: #e8f7ff; background: rgba(4, 25, 45, .82); }
+.opcoes-recompensa-troca-rpg button:hover,
+.opcoes-recompensa-troca-rpg button.selecionada { border-color: #ffd861; background: linear-gradient(155deg, rgba(92, 70, 31, .9), rgba(29, 31, 52, .95)); box-shadow: 0 0 0 2px rgba(255, 216, 97, .16); }
+.opcoes-recompensa-troca-rpg button span { font-size: 2rem; line-height: 1; }
+.opcoes-recompensa-troca-rpg button strong { color: #fff0ad; font-size: .77rem; }
+.opcoes-recompensa-troca-rpg button small { color: #9fc1d1; font-size: .68rem; }
+.desenho-troca-rpg { padding: 16px 10px; display: grid; grid-template-columns: 1fr 54px 1fr; align-items: center; gap: 9px; border-top: 1px solid rgba(132, 199, 229, .25); border-bottom: 1px solid rgba(132, 199, 229, .25); }
+.bloco-cartas-repetidas-troca-rpg { display: block; padding: 16px 12px 12px; }
+.cabecalho-cartas-repetidas-troca-rpg { display: flex; align-items: center; justify-content: center; gap: 8px; color: #fff0ad; }
+.cabecalho-cartas-repetidas-troca-rpg > span { font-size: 1.7rem; }
+.cabecalho-cartas-repetidas-troca-rpg strong { font-family: Georgia, serif; font-size: 1.12rem; }
+.cabecalho-cartas-repetidas-troca-rpg small { color: #9fc1d1; font-size: .75rem; }
+.busca-cartas-repetidas-troca-rpg { width: min(420px, 100%); min-height: 38px; margin: 12px auto; display: block; padding: 7px 10px; border: 1px solid rgba(124, 197, 239, .43); border-radius: 8px; color: #f2fbff; font: inherit; background: #08233d; }
+.lista-cartas-repetidas-troca-rpg { max-height: 245px; padding: 5px; display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 8px; overflow-y: auto; border: 1px solid rgba(120, 193, 239, .22); border-radius: 11px; background: rgba(2, 16, 31, .38); }
+.carta-repetida-opcao-rpg { min-width: 0; min-height: 139px; padding: 7px 5px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: 1px solid rgba(120, 193, 239, .3); border-radius: 9px; color: #e8f7ff; background: rgba(5, 29, 50, .85); cursor: pointer; }
+.carta-repetida-opcao-rpg:hover,
+.carta-repetida-opcao-rpg.selecionada { border-color: #ffd861; background: linear-gradient(155deg, rgba(92, 70, 31, .9), rgba(29, 31, 52, .95)); box-shadow: 0 0 0 2px rgba(255, 216, 97, .14); }
+.carta-repetida-opcao-rpg img { width: 53px; height: 72px; object-fit: contain; border-radius: 4px; }
+.carta-repetida-opcao-rpg strong { max-width: 100%; overflow: hidden; color: #fff0ad; font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
+.carta-repetida-opcao-rpg small { color: #9fc1d1; font-size: .62rem; }
+.quantidade-troca-rpg { display: none; }
+.origem-desenho-troca-rpg,
+.recurso-desenho-troca-rpg { min-height: 115px; padding: 9px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border: 1px solid rgba(120, 193, 239, .32); border-radius: 11px; color: #e8f7ff; background: rgba(4, 24, 43, .72); text-align: center; }
+.origem-desenho-troca-rpg > span,
+.recurso-desenho-troca-rpg > span { font-size: 2.3rem; line-height: 1; }
+.carta-repetida-escolha-rpg { cursor: pointer; transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+.carta-repetida-escolha-rpg:hover,
+.carta-repetida-escolha-rpg:focus-within { border-color: #ffd861; box-shadow: 0 0 0 2px rgba(255, 216, 97, .14); transform: translateY(-2px); }
+.carta-repetida-escolha-rpg .imagem-origem-troca-rpg { width: 54px; height: 68px; object-fit: contain; border-radius: 5px; filter: drop-shadow(0 4px 5px rgba(0,0,0,.4)); }
+.carta-repetida-escolha-rpg small { color: #9fc1d1; font-size: .68rem; }
+.origem-desenho-troca-rpg strong,
+.recurso-desenho-troca-rpg strong { color: #fff0ad; font-size: .78rem; }
+.origem-desenho-troca-rpg select,
+.recurso-desenho-troca-rpg input { width: 100%; min-height: 33px; padding: 5px; border: 1px solid rgba(124, 197, 239, .43); border-radius: 7px; color: #f2fbff; font: inherit; font-size: .72rem; background: #08233d; }
+.simbolo-desenho-troca-rpg { color: #f2cd63; font-size: 2rem; text-align: center; }
+
 body.modal-troca-aberto-rpg { overflow: hidden; }
 
 .modal-troca-rpg {
@@ -6430,10 +6597,39 @@ body.modal-troca-aberto-rpg { overflow: hidden; }
 @media (max-width: 560px) {
     .modal-troca-rpg { padding: 9px; }
     .modal-troca-conteudo-rpg { max-height: calc(100vh - 18px); padding: 21px 14px; border-radius: 15px; }
+    .opcoes-recompensa-principal-rpg { gap: 7px; }
+    .opcoes-recompensa-principal-rpg button { min-height: 96px; padding: 7px 4px; }
+    .valores-moedas-troca-rpg { grid-template-columns: 1fr; }
     .opcoes-troca-rpg { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .opcao-troca-rpg { padding: 8px; }
     .opcao-troca-rpg img { height: 125px; }
     .acoes-modal-troca-rpg button { width: 100%; min-width: 0; }
+}
+
+@media (max-width: 900px) {
+    .grade-cartas-loja-rpg { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grade-baus-loja-rpg { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .lista-conversoes-moedas-rpg { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grade-moedas-reais-rpg { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .monstruario-trocas-rpg { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+    .bloco-loja-rpg { padding: 15px; }
+    .cabecalho-bloco-loja-rpg { margin-left: -15px; margin-right: -15px; padding-left: 15px; padding-right: 15px; }
+    .grade-cartas-loja-rpg,
+    .grade-baus-loja-rpg,
+    .lista-conversoes-moedas-rpg,
+    .grade-moedas-reais-rpg { grid-template-columns: 1fr; }
+    .monstruario-trocas-rpg { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .oferta-exibicao-troca-rpg { padding: 15px 13px 12px !important; }
+    .visual-oferta-exibicao-troca-rpg { grid-template-columns: minmax(78px, 1fr) 34px minmax(90px, 1fr); gap: 5px; }
+    .premio-exibicao-troca-rpg, .custo-exibicao-troca-rpg { min-height: 106px; padding: 7px 4px; }
+    .premio-exibicao-troca-rpg span, .custo-exibicao-troca-rpg span { font-size: 2.4rem; }
+    .premio-exibicao-troca-rpg strong, .custo-exibicao-troca-rpg strong { font-size: .86rem; }
+    .rodape-oferta-exibicao-troca-rpg { margin-left: -13px; margin-right: -13px; padding-left: 13px; padding-right: 13px; flex-wrap: wrap; justify-content: center; }
+    .opcoes-recompensa-troca-rpg { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .desenho-troca-rpg { grid-template-columns: 1fr 30px 1fr; gap: 4px; padding-left: 0; padding-right: 0; }
 }
 
 /* Arena e resultado */

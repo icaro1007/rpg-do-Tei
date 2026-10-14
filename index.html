@@ -168,18 +168,47 @@
         <section id="pagina-loja-rpg" class="pagina-menu-rpg" data-pagina="loja" hidden>
             <div class="cabecalho-secao-menu cabecalho-pagina-menu">
                 <div><span class="etiqueta-menu">MERCADO DIÁRIO</span><h2>Loja da arena</h2></div>
-                <p>Seis ofertas por dia: presente grátis, cópia de carta descoberta, baús das três eras e Baú Supremo.</p>
+                <p>Escolha cartas, troque cópias repetidas, abra baús e compre moedas.</p>
             </div>
-            <div id="grade-loja-rpg" class="grade-loja-rpg"></div>
-            <p id="mensagem-loja-rpg" class="mensagem-loja-rpg" aria-live="polite"></p>
-            <section class="troca-repetidas-rpg" aria-labelledby="titulo-troca-repetidas-rpg">
-                <div>
-                    <span class="etiqueta-menu">CARTAS REPETIDAS</span>
-                    <h3 id="titulo-troca-repetidas-rpg">Troque 3 cópias extras por uma carta nova</h3>
-                    <p>A cópia principal permanece na coleção. Você escolhe qual carta nova quer receber entre as eras já alcançadas.</p>
+            <section class="bloco-loja-rpg bloco-presente-loja-rpg" aria-labelledby="titulo-presente-loja-rpg">
+                <div class="cabecalho-bloco-loja-rpg">
+                    <span class="etiqueta-menu">OFERTAS DO DIA</span>
+                    <h3 id="titulo-presente-loja-rpg">Escolha entre 6 ofertas</h3>
+                    <p>Um presente gratuito por dia e cinco cartas já desbloqueadas. Se o presente vier como baú, ele abre aqui mesmo.</p>
                 </div>
-                <div id="lista-trocas-rpg" class="lista-trocas-rpg"></div>
+                <div id="grade-cartas-loja-rpg" class="grade-cartas-loja-rpg"></div>
+            </section>
+            <p id="mensagem-loja-rpg" class="mensagem-loja-rpg" aria-live="polite"></p>
+            <section class="bloco-loja-rpg troca-repetidas-rpg" aria-labelledby="titulo-troca-repetidas-rpg">
+                <div class="cabecalho-bloco-loja-rpg">
+                    <span class="etiqueta-menu">TROCAS</span>
+                    <h3 id="titulo-troca-repetidas-rpg">Monstruário de trocas</h3>
+                    <p>As ofertas passam como uma exposição. Clique em uma delas para escolher a carta, a quantidade e a recompensa. A cópia principal nunca é consumida.</p>
+                </div>
+                <div class="carrossel-trocas-rpg">
+                    <div id="monstruario-trocas-rpg" class="monstruario-trocas-rpg"></div>
+                </div>
                 <p id="mensagem-troca-rpg" class="mensagem-troca-rpg" aria-live="polite"></p>
+            </section>
+            <section class="bloco-loja-rpg bloco-baus-loja-rpg" aria-labelledby="titulo-baus-loja-rpg">
+                <div class="cabecalho-bloco-loja-rpg">
+                    <span class="etiqueta-menu">BAÚS</span>
+                    <h3 id="titulo-baus-loja-rpg">Baús das eras</h3>
+                    <p>A era anterior custa 40 moedas a menos, a atual tem o preço-base, a próxima custa 60 a mais e o Supremo custa o dobro do preço-base.</p>
+                </div>
+                <div id="grade-baus-loja-rpg" class="grade-baus-loja-rpg"></div>
+            </section>
+            <section class="bloco-loja-rpg bloco-moedas-reais-rpg" aria-labelledby="titulo-moedas-reais-rpg">
+                <div class="cabecalho-bloco-loja-rpg">
+                    <span class="etiqueta-menu">MOEDAS</span>
+                    <h3 id="titulo-moedas-reais-rpg">Compre moedas com dinheiro real</h3>
+                    <p>Os pacotes ficam preparados para a futura integração de pagamento.</p>
+                </div>
+                <div id="grade-moedas-reais-rpg" class="grade-moedas-reais-rpg">
+                    <article class="pacote-moedas-real-rpg"><span>🪙</span><strong>1.000 moedas</strong><small>Preço a definir</small><button type="button" disabled>Em breve</button></article>
+                    <article class="pacote-moedas-real-rpg"><span>🪙</span><strong>5.000 moedas</strong><small>Preço a definir</small><button type="button" disabled>Em breve</button></article>
+                    <article class="pacote-moedas-real-rpg"><span>🪙</span><strong>12.000 moedas</strong><small>Preço a definir</small><button type="button" disabled>Em breve</button></article>
+                </div>
             </section>
         </section>
     </main>
